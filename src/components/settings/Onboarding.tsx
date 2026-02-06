@@ -11,6 +11,7 @@ export function Onboarding() {
     birthday: settings.birthday,
     sex: settings.sex,
     heightCm: settings.heightCm,
+    weightKg: 75,
     targetBodyFatPct: settings.targetBodyFatPct,
     targetFFMI: settings.targetFFMI,
     targetCaloricDelta: settings.targetCaloricDelta,
@@ -20,6 +21,8 @@ export function Onboarding() {
   const update = (key: string, value: unknown) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
+
+  const age = calcAge(form.birthday);
 
   const steps = [
     {
@@ -49,16 +52,30 @@ export function Onboarding() {
               </select>
             </div>
           </div>
-          <div className="form-group">
-            <label className="label">Height (cm)</label>
-            <input
-              type="number"
-              className="input"
-              value={form.heightCm}
-              onChange={(e) => update('heightCm', Number(e.target.value))}
-              min={100}
-              max={250}
-            />
+          <div className="form-row">
+            <div className="form-group">
+              <label className="label">Height (cm)</label>
+              <input
+                type="number"
+                className="input"
+                value={form.heightCm}
+                onChange={(e) => update('heightCm', Number(e.target.value))}
+                min={100}
+                max={250}
+              />
+            </div>
+            <div className="form-group">
+              <label className="label">Current Weight (kg)</label>
+              <input
+                type="number"
+                className="input"
+                value={form.weightKg}
+                onChange={(e) => update('weightKg', Number(e.target.value))}
+                min={30}
+                max={300}
+                step={0.1}
+              />
+            </div>
           </div>
         </>
       ),
@@ -116,12 +133,11 @@ export function Onboarding() {
     },
     {
       title: 'Activity Level',
-      subtitle: 'This determines your estimated daily calorie expenditure.',
+      subtitle: `Estimated daily calories at your weight (${form.weightKg} kg).`,
       content: (
         <div className="activity-options">
           {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((level) => {
-            const age = calcAge(form.birthday);
-            const bmr = calcBMR(form.sex, 75, form.heightCm, age);
+            const bmr = calcBMR(form.sex, form.weightKg, form.heightCm, age);
             const tdee = calcTDEE(bmr, level);
             return (
               <button
@@ -130,7 +146,7 @@ export function Onboarding() {
                 onClick={() => update('activityLevel', level)}
               >
                 <div className="activity-option-label">{ACTIVITY_LABELS[level]}</div>
-                <div className="activity-option-cal">~{tdee} kcal/day (at 75 kg)</div>
+                <div className="activity-option-cal">~{tdee} kcal/day</div>
                 <div className="activity-option-mult">x{ACTIVITY_MULTIPLIERS[level]}</div>
               </button>
             );
@@ -145,7 +161,13 @@ export function Onboarding() {
 
   const finish = () => {
     updateSettings({
-      ...form,
+      birthday: form.birthday,
+      sex: form.sex,
+      heightCm: form.heightCm,
+      targetBodyFatPct: form.targetBodyFatPct,
+      targetFFMI: form.targetFFMI,
+      targetCaloricDelta: form.targetCaloricDelta,
+      activityLevel: form.activityLevel,
       onboardingComplete: true,
     });
   };

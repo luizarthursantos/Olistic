@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { ActivityLevel, ACTIVITY_LABELS, UnitSystem } from '../../types';
 import { exportAllData, importData } from '../../utils/storage';
-import { X, Download, Upload, Sun, Moon } from 'lucide-react';
+import { X, Download, Upload, Sun, Moon, Database } from 'lucide-react';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -10,7 +10,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
-  const { settings, updateSettings } = useStore();
+  const { settings, updateSettings, loadSampleData } = useStore();
   const [importStatus, setImportStatus] = useState<string>('');
 
   const handleExport = () => {
@@ -177,12 +177,21 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
         <div className="settings-section">
           <h3 className="settings-section-title">Data</h3>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <button className="btn btn-secondary" onClick={handleExport}>
               <Download size={16} /> Export JSON
             </button>
             <button className="btn btn-secondary" onClick={handleImport}>
               <Upload size={16} /> Import JSON
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                loadSampleData();
+                setImportStatus('Sample data loaded! 6 months of history across all metrics.');
+              }}
+            >
+              <Database size={16} /> Load Sample Data
             </button>
           </div>
           {importStatus && (

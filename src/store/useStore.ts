@@ -19,6 +19,7 @@ import {
 } from '../types';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { DEFAULT_EXERCISES } from '../utils/defaultExercises';
+import { generateAllSampleData } from '../utils/sampleData';
 
 export interface AppState {
   // Settings
@@ -75,6 +76,9 @@ export interface AppState {
   setSelectedDate: (date: string) => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+
+  // Sample data
+  loadSampleData: () => void;
 }
 
 const defaultSettings: UserSettings = {
@@ -260,4 +264,25 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedDate: (date) => set({ selectedDate: date }),
   activeTab: 'body',
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  // Sample data
+  loadSampleData: () => {
+    const data = generateAllSampleData(get().exercises);
+    set({
+      bodyEntries: data.bodyEntries,
+      foodItems: data.foodItems,
+      mealEntries: data.mealEntries,
+      macroTargets: data.macroTargets,
+      workoutTemplates: data.workoutTemplates,
+      workoutSessions: data.workoutSessions,
+      analyticsCharts: data.analyticsCharts,
+    });
+    saveToStorage('bodyEntries', data.bodyEntries);
+    saveToStorage('foodItems', data.foodItems);
+    saveToStorage('mealEntries', data.mealEntries);
+    saveToStorage('macroTargets', data.macroTargets);
+    saveToStorage('workoutTemplates', data.workoutTemplates);
+    saveToStorage('workoutSessions', data.workoutSessions);
+    saveToStorage('analyticsCharts', data.analyticsCharts);
+  },
 }));
