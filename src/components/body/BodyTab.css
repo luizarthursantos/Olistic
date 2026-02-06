@@ -1,0 +1,27 @@
+.body-tab {
+  padding-bottom: 20px;
+}
+
+.body-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 600px) {
+  .body-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.body-preview {
+  display: flex;
+  gap: 20px;
+  padding: 12px 16px;
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent);
+  margin-top: 4px;
+}

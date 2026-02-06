@@ -1,0 +1,130 @@
+.food-tab {
+  padding-bottom: 20px;
+}
+
+.food-top-section {
+  margin-bottom: 16px;
+}
+
+.food-summary {
+  margin-bottom: 16px;
+}
+
+.food-summary-main {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.food-calories-big {
+  font-size: 36px;
+  font-weight: 700;
+  display: block;
+}
+
+.food-calories-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.food-calories-remaining {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  margin-top: 4px;
+}
+
+.food-macros-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.food-macro-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border: 2px solid;
+  border-radius: var(--radius-sm);
+  min-width: 70px;
+}
+
+.food-macro-val {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.food-macro-name {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.food-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 500px) {
+  .food-charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.food-chart-card {
+  padding: 16px;
+}
+
+.food-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.pie-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Meal sections */
+.meal-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.meal-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.meal-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meal-section-cal {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
