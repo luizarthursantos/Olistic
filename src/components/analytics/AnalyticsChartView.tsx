@@ -76,6 +76,40 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
     });
   }, [chart, state.bodyEntries, state.mealEntries, state.macroTargets, state.workoutSessions, state.settings]);
 
+  // Compute domain for left/right axes: fit to data range with 5% margin
+  const axisDomain = useMemo(() => {
+    const leftKeys = chart.metrics
+      .filter((m) => m.axis !== 'right')
+      .flatMap((m) => [m.key, chart.showMovingAverage ? `${m.key}_ma` : null].filter(Boolean) as string[]);
+    const rightKeys = chart.metrics
+      .filter((m) => m.axis === 'right')
+      .flatMap((m) => [m.key, chart.showMovingAverage ? `${m.key}_ma` : null].filter(Boolean) as string[]);
+
+    const getRange = (keys: string[]): [number, number] | undefined => {
+      const values: number[] = [];
+      chartData.forEach((point) => {
+        keys.forEach((k) => {
+          const v = point[k];
+          if (typeof v === 'number' && isFinite(v)) values.push(v);
+        });
+      });
+      if (values.length === 0) return undefined;
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || Math.abs(max) * 0.1 || 1;
+      const margin = range * 0.05;
+      return [
+        Math.floor((min - margin) * 100) / 100,
+        Math.ceil((max + margin) * 100) / 100,
+      ];
+    };
+
+    return {
+      left: getRange(leftKeys),
+      right: getRange(rightKeys),
+    };
+  }, [chartData, chart.metrics, chart.showMovingAverage]);
+
   if (chartData.length === 0) {
     return (
       <div className="text-center text-muted" style={{ padding: 40 }}>
@@ -103,6 +137,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
             yAxisId="left"
             tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
             width={50}
+            domain={axisDomain.left || ['auto', 'auto']}
           />
           {hasRightAxis && (
             <YAxis
@@ -110,6 +145,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
               orientation="right"
               tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
               width={50}
+              domain={axisDomain.right || ['auto', 'auto']}
             />
           )}
           <Tooltip
