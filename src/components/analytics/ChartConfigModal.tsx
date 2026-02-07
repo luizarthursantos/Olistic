@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { AnalyticsChart, AnalyticsMetric, DateRangeOption } from '../../types';
 import { AVAILABLE_METRICS, MetricDefinition } from './analyticsMetrics';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, BarChart2, TrendingUp } from 'lucide-react';
 
 interface ChartConfigModalProps {
   chart: AnalyticsChart | null;
@@ -123,6 +123,13 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
                         ))}
                     </select>
                   )}
+                  <button
+                    className="metric-axis-toggle"
+                    onClick={() => updateMetric(i, { chartType: (metric.chartType || 'line') === 'line' ? 'bar' : 'line' })}
+                    title={(metric.chartType || 'line') === 'line' ? 'Line chart' : 'Bar chart'}
+                  >
+                    {(metric.chartType || 'line') === 'line' ? <TrendingUp size={13} /> : <BarChart2 size={13} />}
+                  </button>
                   <button
                     className={`metric-axis-toggle ${metric.axis === 'right' ? 'right' : ''}`}
                     onClick={() => updateMetric(i, { axis: metric.axis === 'left' ? 'right' : 'left' })}

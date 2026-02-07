@@ -124,6 +124,7 @@ export interface AnalyticsMetric {
   label: string;
   color: string;
   axis: 'left' | 'right';
+  chartType?: 'line' | 'bar';
   exerciseId?: string; // for one rep max
 }
 

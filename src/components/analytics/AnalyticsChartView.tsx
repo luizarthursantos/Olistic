@@ -4,8 +4,9 @@ import { AnalyticsChart, DateRangeOption } from '../../types';
 import { getMetricData, AVAILABLE_METRICS } from './analyticsMetrics';
 import { movingAverage } from '../../utils/calculations';
 import {
-  LineChart,
+  ComposedChart,
   Line,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -173,7 +174,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
   return (
     <div>
       <ResponsiveContainer width="100%" height={280}>
-        <LineChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 5 : 5, bottom: 5, left: 0 }}>
+        <ComposedChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 5 : 5, bottom: 5, left: 0 }}>
           <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
           {xTicks.map((tick) => (
             <ReferenceLine
@@ -223,25 +224,42 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
           {chart.metrics.map((metric) => {
             const metricDef = AVAILABLE_METRICS.find((m) => m.key === metric.key);
             const hasMA = chart.showMovingAverage;
-            const isBody = metricDef?.category === 'body';
+            const isBar = (metric.chartType || 'line') === 'bar';
+            const yAxisId = metric.axis === 'right' ? 'right' : 'left';
+            const name = metric.label || metricDef?.label || metric.key;
+
+            if (isBar) {
+              return (
+                <Bar
+                  key={metric.key}
+                  yAxisId={yAxisId}
+                  dataKey={metric.key}
+                  fill={hasMA ? `${metric.color}33` : `${metric.color}99`}
+                  name={name}
+                />
+              );
+            }
+
             return (
               <Line
                 key={metric.key}
-                yAxisId={metric.axis === 'right' ? 'right' : 'left'}
+                yAxisId={yAxisId}
                 type={hasMA ? 'linear' : 'monotone'}
                 dataKey={metric.key}
                 stroke={hasMA ? `${metric.color}33` : metric.color}
                 strokeWidth={hasMA ? 1 : 2}
                 dot={false}
-                name={metric.label || metricDef?.label || metric.key}
-                connectNulls={isBody}
+                name={name}
+                connectNulls
               />
             );
           })}
           {chart.showMovingAverage &&
             chart.metrics.map((metric) => {
               const metricDef = AVAILABLE_METRICS.find((m) => m.key === metric.key);
-              const isBody = metricDef?.category === 'body';
+              const isBar = (metric.chartType || 'line') === 'bar';
+              // No MA line for bar metrics
+              if (isBar) return null;
               return (
                 <Line
                   key={`${metric.key}_ma`}
@@ -251,12 +269,12 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
                   stroke={metric.color}
                   strokeWidth={2.5}
                   dot={false}
-                  name={`${metric.label || metric.key} (MA ${chart.movingAverageDays}d)`}
-                  connectNulls={isBody}
+                  name={`${metric.label || metricDef?.label || metric.key} (MA ${chart.movingAverageDays}d)`}
+                  connectNulls
                 />
               );
             })}
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );
