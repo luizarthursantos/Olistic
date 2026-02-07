@@ -173,7 +173,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
     <div>
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 5 : 5, bottom: 5, left: 0 }}>
-          <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" />
           <XAxis
             dataKey="date"
             ticks={xTicks.length > 0 ? xTicks : undefined}
