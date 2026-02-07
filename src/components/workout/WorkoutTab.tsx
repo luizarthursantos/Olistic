@@ -190,50 +190,70 @@ export function WorkoutTab() {
                 <p className="text-muted">No workouts completed yet</p>
               </div>
             ) : (
-              <div className="workout-history-list">
-                {sortedSessions.map((session) => (
-                  <div key={session.id} className="workout-history-item">
-                    <div
-                      className="color-dot"
-                      style={{ background: getTemplateColor(session.templateId), flexShrink: 0 }}
-                    />
-                    <div className="workout-history-info">
-                      <h4>{getTemplateName(session.templateId)}</h4>
-                      <p className="text-sm text-muted">
-                        {session.date}
-                        {session.estimatedCalories > 0 && ` · ${session.estimatedCalories} kcal`}
-                        {session.completed && ' · Completed'}
-                        {!session.completed && ' · In Progress'}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {session.completed && (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => setActiveSession(session.id)}
-                        >
-                          <Eye size={14} /> View
-                        </button>
-                      )}
-                      {!session.completed && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => setActiveSession(session.id)}
-                        >
-                          Resume
-                        </button>
-                      )}
-                      {editModeHistory && (
-                        <button
-                          className="btn btn-icon btn-danger btn-sm"
-                          onClick={() => setDeleteConfirm({ type: 'session', id: session.id })}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th></th>
+                        <th>Workout</th>
+                        <th>Date</th>
+                        <th>kcal</th>
+                        <th>Status</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedSessions.map((session) => (
+                        <tr key={session.id}>
+                          <td style={{ width: 16, padding: '10px 4px 10px 12px' }}>
+                            <div
+                              className="color-dot"
+                              style={{ background: getTemplateColor(session.templateId) }}
+                            />
+                          </td>
+                          <td style={{ fontWeight: 500 }}>{getTemplateName(session.templateId)}</td>
+                          <td>{session.date}</td>
+                          <td>{session.estimatedCalories > 0 ? session.estimatedCalories : '-'}</td>
+                          <td>
+                            <span className={`badge ${session.completed ? 'badge-success' : 'badge-warning'}`}>
+                              {session.completed ? 'Done' : 'In Progress'}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                              {session.completed && (
+                                <button
+                                  className="btn btn-icon btn-secondary btn-sm"
+                                  onClick={() => setActiveSession(session.id)}
+                                  title="View"
+                                >
+                                  <Eye size={14} />
+                                </button>
+                              )}
+                              {!session.completed && (
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() => setActiveSession(session.id)}
+                                >
+                                  Resume
+                                </button>
+                              )}
+                              {editModeHistory && (
+                                <button
+                                  className="btn btn-icon btn-danger btn-sm"
+                                  onClick={() => setDeleteConfirm({ type: 'session', id: session.id })}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
