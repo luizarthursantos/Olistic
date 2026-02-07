@@ -334,12 +334,13 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                 />
                 <div className="form-group" style={{ marginBottom: 12 }}>
                   <label className="label">Description (optional)</label>
-                  <input
-                    type="text"
+                  <textarea
                     className="input"
+                    rows={3}
                     value={photoDescription}
                     onChange={(e) => setPhotoDescription(e.target.value)}
-                    placeholder="e.g., 200g grilled chicken with rice"
+                    placeholder="e.g., 200g grilled chicken with rice, side salad with olive oil dressing"
+                    style={{ resize: 'vertical' }}
                   />
                 </div>
                 <button
