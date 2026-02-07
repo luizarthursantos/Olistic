@@ -130,7 +130,8 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
             tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
             tickFormatter={(val: string) => {
               const d = new Date(val + 'T12:00:00');
-              return `${d.getMonth() + 1}/${d.getDate()}`;
+              const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+              return `${d.getDate()}-${months[d.getMonth()]}`;
             }}
           />
           <YAxis
