@@ -82,24 +82,33 @@ export function BodyTab() {
     setDeleteConfirm(null);
   };
 
+  // Safe numeric getter — handles strings, undefined, NaN
+  const num = (val: unknown): number => {
+    const n = Number(val);
+    return isFinite(n) ? n : 0;
+  };
+
   // Interpolate a numeric field for a given date from surrounding entries that have it
   const interpolateField = (date: string, field: 'weightKg' | 'waistCm' | 'neckCm'): number => {
     const sorted = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
-    const before = sorted.filter((e) => e.date <= date && e[field]).pop();
-    const after = sorted.find((e) => e.date >= date && e[field]);
+    const before = sorted.filter((e) => e.date <= date && num(e[field]) > 0).pop();
+    const after = sorted.find((e) => e.date >= date && num(e[field]) > 0);
     if (before && after && before.date !== after.date) {
       const d1 = new Date(before.date + 'T12:00:00').getTime();
       const d2 = new Date(after.date + 'T12:00:00').getTime();
       const dt = new Date(date + 'T12:00:00').getTime();
       const t = (dt - d1) / (d2 - d1);
-      return Math.round((before[field] + t * (after[field] - before[field])) * 10) / 10;
+      const v1 = num(before[field]);
+      const v2 = num(after[field]);
+      return Math.round((v1 + t * (v2 - v1)) * 10) / 10;
     }
-    return before?.[field] || after?.[field] || 0;
+    return num(before?.[field]) || num(after?.[field]) || 0;
   };
 
   // Get best value for a field: use entry's own value if present, otherwise interpolate
   const resolveField = (entry: BodyEntry, field: 'weightKg' | 'waistCm' | 'neckCm'): number => {
-    return entry[field] || interpolateField(entry.date, field);
+    const v = num(entry[field]);
+    return v > 0 ? v : interpolateField(entry.date, field);
   };
 
   // Interpolate a body entry for the selected date if no exact entry exists
@@ -238,14 +247,17 @@ export function BodyTab() {
                   const waist = resolveField(entry, 'waistCm');
                   const neck = resolveField(entry, 'neckCm');
                   const bf = calcBodyFatNavy(settings.sex, waist, neck, settings.heightCm);
-                  const estimatedStyle = { color: 'var(--text-muted)', fontStyle: 'italic' as const };
+                  const est = { color: 'var(--text-muted)', fontStyle: 'italic' as const };
+                  const hasWeight = num(entry.weightKg) > 0;
+                  const hasWaist = num(entry.waistCm) > 0;
+                  const hasNeck = num(entry.neckCm) > 0;
                   return (
                     <tr key={entry.id}>
                       <td>{entry.date.slice(8,10)}-{entry.date.slice(5,7)}-{entry.date.slice(2,4)}</td>
-                      <td style={!entry.weightKg ? estimatedStyle : undefined}>{weight || '–'}</td>
-                      <td style={!entry.waistCm ? estimatedStyle : undefined}>{waist || '–'}</td>
-                      <td style={!entry.neckCm ? estimatedStyle : undefined}>{neck || '–'}</td>
-                      <td style={!entry.waistCm || !entry.neckCm ? estimatedStyle : undefined}>{bf || '–'}</td>
+                      <td style={!hasWeight ? est : undefined}>{weight || '–'}</td>
+                      <td style={!hasWaist ? est : undefined}>{waist || '–'}</td>
+                      <td style={!hasNeck ? est : undefined}>{neck || '–'}</td>
+                      <td style={!hasWaist || !hasNeck ? est : undefined}>{bf || '–'}</td>
                       {editMode && (
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>

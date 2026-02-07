@@ -147,5 +147,10 @@ function parseCell(value: unknown, isJsonCol: boolean): unknown {
     }
   }
 
+  // Coerce numeric strings to numbers
+  if (typeof value === 'string' && value.trim() !== '' && isFinite(Number(value))) {
+    return Number(value);
+  }
+
   return value;
 }
