@@ -2,10 +2,6 @@
   padding-bottom: 20px;
 }
 
-.food-top-section {
-  margin-bottom: 16px;
-}
-
 .food-summary {
   margin-bottom: 16px;
 }
@@ -36,28 +32,29 @@
 
 .food-macros-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .food-macro-pill {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 14px;
+  padding: 6px 10px;
   background: var(--bg-secondary);
   border: 2px solid;
   border-radius: var(--radius-sm);
-  min-width: 70px;
+  min-width: 58px;
 }
 
 .food-macro-val {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .food-macro-name {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
 }
 
@@ -99,32 +96,152 @@
   color: var(--text-secondary);
 }
 
-/* Meal sections */
-.meal-section {
+/* Macro progress bars */
+.macro-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.macro-progress-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.macro-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.macro-progress-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.macro-progress-values {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.macro-progress-remaining {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.macro-progress-track {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.macro-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Unified meal table */
+.meal-table-container {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 12px;
+  overflow: hidden;
 }
 
-.meal-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+.meal-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.meal-section-title {
-  font-size: 15px;
+.meal-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-tertiary);
+  font-size: 11px;
   font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.meal-table thead th.col-num {
+  text-align: center;
+  width: 42px;
+}
+
+.meal-table thead th.col-action {
+  width: 36px;
+}
+
+.meal-table td {
+  padding: 6px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.meal-table td.col-num {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.meal-table td.col-action {
+  text-align: center;
+}
+
+.meal-table td.col-name {
+  font-size: 13px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Section rows */
+.meal-section-row {
+  background: var(--bg-tertiary);
+}
+
+.meal-section-row td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.meal-section-row-inner {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
 }
 
-.meal-section-cal {
-  font-size: 12px;
+.meal-section-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.meal-section-subtotal {
+  font-size: 11px;
   color: var(--text-muted);
   font-weight: 400;
+}
+
+.btn-add-meal {
+  padding: 4px 8px !important;
+}
+
+.meal-item-row:last-child td {
+  border-bottom: none;
+}
+
+.meal-empty-row td {
+  padding: 8px 6px;
+  text-align: center;
 }
