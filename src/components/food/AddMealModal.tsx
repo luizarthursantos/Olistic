@@ -310,26 +310,30 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
           <button
             className={`tab-btn ${mode === 'manual' ? 'active' : ''}`}
             onClick={() => setMode('manual')}
+            title="Manual"
           >
-            Manual
+            <Pencil size={16} />
           </button>
           <button
             className={`tab-btn ${mode === 'search' ? 'active' : ''}`}
             onClick={() => setMode('search')}
+            title="Search Food"
           >
-            <Search size={14} /> Search Food
+            <Search size={16} />
           </button>
           <button
             className={`tab-btn ${mode === 'ai' ? 'active' : ''}`}
             onClick={() => setMode('ai')}
+            title="AI"
           >
-            <Sparkles size={14} /> AI
+            <Sparkles size={16} />
           </button>
           <button
             className={`tab-btn ${mode === 'photo' ? 'active' : ''}`}
             onClick={() => setMode('photo')}
+            title="Photo"
           >
-            <Camera size={14} /> Photo
+            <Camera size={16} />
           </button>
         </div>
 
