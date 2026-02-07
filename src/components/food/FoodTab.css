@@ -221,7 +221,7 @@
 .meal-section-row td {
   padding: 8px 6px;
   border-bottom: 1px solid var(--border-color);
-  border-top: 6px solid var(--bg-primary);
+  border-top: 12px solid var(--bg-primary);
 }
 
 .meal-table tbody tr:first-child.meal-section-row td {
