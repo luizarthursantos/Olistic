@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { v4 as uuid } from 'uuid';
 
 const STORAGE_PREFIX = 'olistic_';
 
@@ -102,6 +103,10 @@ export function importFromXlsx(buffer: ArrayBuffer): boolean {
           const restored: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(row)) {
             restored[k] = parseCell(v, sheet.jsonCols?.includes(k) ?? false);
+          }
+          // Auto-generate id if missing or empty
+          if (!restored.id) {
+            restored.id = uuid();
           }
           return restored;
         });
