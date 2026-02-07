@@ -118,42 +118,46 @@ export function getMetricData(
   // Use raw body entries — chart lines connect points directly (linear interpolation)
   const entries = bodyEntries;
 
+  // Helper: only include entries that have the required field(s)
+  const has = (e: BodyEntry, ...fields: (keyof BodyEntry)[]) =>
+    fields.every((f) => n(e[f]) > 0);
+
   switch (key) {
     case 'weight':
-      return entries.map((e) => ({ date: e.date, value: n(e.weightKg) }));
+      return entries.filter((e) => has(e, 'weightKg')).map((e) => ({ date: e.date, value: n(e.weightKg) }));
 
     case 'body_fat_pct':
-      return entries.map((e) => ({
+      return entries.filter((e) => has(e, 'waistCm', 'neckCm')).map((e) => ({
         date: e.date,
         value: calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm)),
       }));
 
     case 'body_fat_kg':
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
         const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         return { date: e.date, value: Math.round(n(e.weightKg) * bf / 100 * 10) / 10 };
       });
 
     case 'lean_mass_pct':
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'waistCm', 'neckCm')).map((e) => {
         const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         return { date: e.date, value: Math.round((100 - bf) * 10) / 10 };
       });
 
     case 'lean_mass_kg':
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
         const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         return { date: e.date, value: Math.round(n(e.weightKg) * (1 - bf / 100) * 10) / 10 };
       });
 
     case 'waist':
-      return entries.map((e) => ({ date: e.date, value: n(e.waistCm) }));
+      return entries.filter((e) => has(e, 'waistCm')).map((e) => ({ date: e.date, value: n(e.waistCm) }));
 
     case 'neck':
-      return entries.map((e) => ({ date: e.date, value: n(e.neckCm) }));
+      return entries.filter((e) => has(e, 'neckCm')).map((e) => ({ date: e.date, value: n(e.neckCm) }));
 
     case 'ffmi':
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
         const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         return { date: e.date, value: calcFFMI(n(e.weightKg), bf, n(settings.heightCm)) };
       });
@@ -165,13 +169,13 @@ export function getMetricData(
       return entries.map((e) => ({ date: e.date, value: n(settings.targetBodyFatPct) }));
 
     case 'fat_to_lose_pct':
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'waistCm', 'neckCm')).map((e) => {
         const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         return { date: e.date, value: Math.max(0, Math.round((bf - n(settings.targetBodyFatPct)) * 10) / 10) };
       });
 
     case 'fat_to_lose_kg':
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
         const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         const currentFatKg = n(e.weightKg) * bf / 100;
         const targetFatKg = n(e.weightKg) * n(settings.targetBodyFatPct) / 100;
@@ -179,7 +183,7 @@ export function getMetricData(
       });
 
     case 'lean_to_gain_pct': {
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'waistCm', 'neckCm')).map((e) => {
         const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         const currentLeanPct = 100 - bf;
         const targetLeanPct = 100 - n(settings.targetBodyFatPct);
@@ -188,7 +192,7 @@ export function getMetricData(
     }
 
     case 'lean_to_gain_kg': {
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
         const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         const currentFFMI = calcFFMI(n(e.weightKg), bf, n(settings.heightCm));
         const delta = n(settings.targetFFMI) - currentFFMI;
@@ -198,13 +202,13 @@ export function getMetricData(
     }
 
     case 'bmr':
-      return entries.map((e) => ({
+      return entries.filter((e) => has(e, 'weightKg')).map((e) => ({
         date: e.date,
         value: calcBMR(settings.sex, n(e.weightKg), n(settings.heightCm), age),
       }));
 
     case 'tdee':
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'weightKg')).map((e) => {
         const bmr = calcBMR(settings.sex, n(e.weightKg), n(settings.heightCm), age);
         const workoutCal = workoutSessions
           .filter((s) => s.date === e.date && s.completed)
@@ -213,7 +217,7 @@ export function getMetricData(
       });
 
     case 'caloric_balance': {
-      return entries.map((e) => {
+      return entries.filter((e) => has(e, 'weightKg')).map((e) => {
         const bmr = calcBMR(settings.sex, n(e.weightKg), n(settings.heightCm), age);
         const tdee = calcTDEE(bmr, e.activityLevel);
         const workoutCal = workoutSessions
