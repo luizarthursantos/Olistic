@@ -222,15 +222,15 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
           <Legend wrapperStyle={{ fontSize: 12 }} />
           {chart.metrics.map((metric) => {
             const metricDef = AVAILABLE_METRICS.find((m) => m.key === metric.key);
-            const rawColor = chart.showMovingAverage ? `${metric.color}cc` : metric.color;
+            const hasMA = chart.showMovingAverage;
             return (
               <Line
                 key={metric.key}
                 yAxisId={metric.axis === 'right' ? 'right' : 'left'}
-                type="monotone"
+                type={hasMA ? 'linear' : 'monotone'}
                 dataKey={metric.key}
-                stroke={rawColor}
-                strokeWidth={chart.showMovingAverage ? 1.5 : 2}
+                stroke={hasMA ? `${metric.color}33` : metric.color}
+                strokeWidth={hasMA ? 1 : 2}
                 dot={false}
                 name={metric.label || metricDef?.label || metric.key}
                 connectNulls
