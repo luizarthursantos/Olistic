@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Legend,
+  ReferenceLine,
 } from 'recharts';
 
 interface AnalyticsChartViewProps {
@@ -173,7 +174,16 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
     <div>
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 5 : 5, bottom: 5, left: 0 }}>
-          <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" />
+          <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
+          {xTicks.map((tick) => (
+            <ReferenceLine
+              key={tick}
+              x={tick}
+              yAxisId="left"
+              stroke="var(--border-color)"
+              strokeDasharray="3 3"
+            />
+          ))}
           <XAxis
             dataKey="date"
             ticks={xTicks.length > 0 ? xTicks : undefined}
