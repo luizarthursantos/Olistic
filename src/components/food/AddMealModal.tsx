@@ -3,7 +3,8 @@ import { useStore } from '../../store/useStore';
 import { MealType, FoodItem, MEAL_TYPE_LABELS } from '../../types';
 import { calcCaloriesFromMacros } from '../../utils/calculations';
 import { analyzeFoodPhoto, FoodAnalysisResult } from '../../utils/analyzeFood';
-import { X, Search, Camera, Image, Loader, Check, Settings, Send } from 'lucide-react';
+import { ConfirmDialog } from '../common/ConfirmDialog';
+import { X, Search, Camera, Image, Loader, Check, Settings, Send, Trash2, Pencil } from 'lucide-react';
 
 interface AddMealModalProps {
   mealType: MealType;
@@ -14,10 +15,12 @@ interface AddMealModalProps {
 type AddMode = 'manual' | 'search' | 'photo';
 
 export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
-  const { addMealEntry, foodItems, addFoodItem, settings } = useStore();
+  const { addMealEntry, foodItems, addFoodItem, deleteFoodItem, settings } = useStore();
   const [mode, setMode] = useState<AddMode>('manual');
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewFood, setShowNewFood] = useState(false);
+  const [editFoods, setEditFoods] = useState(false);
+  const [deleteFoodConfirm, setDeleteFoodConfirm] = useState<string | null>(null);
   const [photoProcessing, setPhotoProcessing] = useState(false);
   const [photoError, setPhotoError] = useState<string>('');
   const [photoResults, setPhotoResults] = useState<FoodAnalysisResult[]>([]);
@@ -219,28 +222,50 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
         {mode === 'search' && (
           <div style={{ marginBottom: 16 }}>
-            <input
-              type="text"
-              className="input"
-              placeholder="Search food items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-            />
-            <div style={{ maxHeight: 200, overflowY: 'auto', marginTop: 8 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input
+                type="text"
+                className="input"
+                placeholder="Search food items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+                style={{ flex: 1 }}
+              />
+              {filteredFoods.length > 0 && (
+                <button
+                  className={`btn btn-sm ${editFoods ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setEditFoods(!editFoods)}
+                >
+                  <Pencil size={13} /> {editFoods ? 'Done' : 'Edit'}
+                </button>
+              )}
+            </div>
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
               {filteredFoods.length > 0 ? (
                 filteredFoods.map((food) => (
-                  <button
-                    key={food.id}
-                    className="food-search-item"
-                    onClick={() => selectFood(food)}
-                  >
-                    <span className="food-search-name">{food.name}</span>
-                    <span className="food-search-macros">
-                      {calcCaloriesFromMacros(food.proteinG, food.carbsG, food.fatG, food.fiberG)} kcal
-                      | P:{food.proteinG}g C:{food.carbsG}g F:{food.fatG}g
-                    </span>
-                  </button>
+                  <div key={food.id} style={{ display: 'flex', alignItems: 'center' }}>
+                    <button
+                      className="food-search-item"
+                      onClick={() => selectFood(food)}
+                      style={{ flex: 1 }}
+                    >
+                      <span className="food-search-name">{food.name}</span>
+                      <span className="food-search-macros">
+                        {calcCaloriesFromMacros(food.proteinG, food.carbsG, food.fatG, food.fiberG)} kcal
+                        | P:{food.proteinG}g C:{food.carbsG}g F:{food.fatG}g
+                      </span>
+                    </button>
+                    {editFoods && (
+                      <button
+                        className="btn btn-icon btn-danger btn-sm"
+                        style={{ marginRight: 8, flexShrink: 0 }}
+                        onClick={() => setDeleteFoodConfirm(food.id)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 ))
               ) : (
                 <p className="text-muted text-sm" style={{ padding: 12 }}>
@@ -582,6 +607,17 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
               </div>
             </div>
           </div>
+        )}
+
+        {deleteFoodConfirm && (
+          <ConfirmDialog
+            message="Are you sure you want to delete this saved food?"
+            onConfirm={() => {
+              deleteFoodItem(deleteFoodConfirm);
+              setDeleteFoodConfirm(null);
+            }}
+            onCancel={() => setDeleteFoodConfirm(null)}
+          />
         )}
       </div>
     </div>
