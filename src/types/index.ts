@@ -15,6 +15,7 @@ export interface UserSettings {
   unitSystem: UnitSystem;
   theme: ThemeMode;
   onboardingComplete: boolean;
+  claudeApiKey: string;
 }
 
 export interface BodyEntry {

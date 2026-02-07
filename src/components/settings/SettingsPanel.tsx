@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { ActivityLevel, ACTIVITY_LABELS, UnitSystem } from '../../types';
 import { exportAllData, importData } from '../../utils/storage';
-import { X, Download, Upload, Sun, Moon, Database } from 'lucide-react';
+import { X, Download, Upload, Sun, Moon, Database, Key } from 'lucide-react';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -172,6 +172,23 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 <option value="imperial">Imperial (lbs, in)</option>
               </select>
             </div>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h3 className="settings-section-title">Integrations</h3>
+          <div className="form-group">
+            <label className="label"><Key size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Claude API Key</label>
+            <input
+              type="password"
+              className="input"
+              value={settings.claudeApiKey}
+              onChange={(e) => updateSettings({ claudeApiKey: e.target.value })}
+              placeholder="sk-ant-..."
+            />
+            <p className="text-muted text-sm" style={{ marginTop: 4 }}>
+              Required for photo-based food analysis. Your key is stored locally.
+            </p>
           </div>
         </div>
 

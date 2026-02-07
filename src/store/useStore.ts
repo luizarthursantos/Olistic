@@ -92,6 +92,7 @@ const defaultSettings: UserSettings = {
   unitSystem: 'metric',
   theme: 'dark',
   onboardingComplete: false,
+  claudeApiKey: '',
 };
 
 const today = new Date().toISOString().split('T')[0];

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { MealType, FoodItem, MEAL_TYPE_LABELS } from '../../types';
 import { calcCaloriesFromMacros } from '../../utils/calculations';
-import { X, Search, Camera } from 'lucide-react';
+import { analyzeFoodPhoto, FoodAnalysisResult } from '../../utils/analyzeFood';
+import { X, Search, Camera, Loader, Check, Settings } from 'lucide-react';
 
 interface AddMealModalProps {
   mealType: MealType;
@@ -13,12 +14,14 @@ interface AddMealModalProps {
 type AddMode = 'manual' | 'search' | 'photo';
 
 export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
-  const { addMealEntry, foodItems, addFoodItem } = useStore();
+  const { addMealEntry, foodItems, addFoodItem, settings } = useStore();
   const [mode, setMode] = useState<AddMode>('manual');
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewFood, setShowNewFood] = useState(false);
-  const [photoEstimate, setPhotoEstimate] = useState<string>('');
   const [photoProcessing, setPhotoProcessing] = useState(false);
+  const [photoError, setPhotoError] = useState<string>('');
+  const [photoResults, setPhotoResults] = useState<FoodAnalysisResult[]>([]);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
 
   const [form, setForm] = useState({
     name: '',
@@ -75,17 +78,84 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!settings.claudeApiKey) {
+      setPhotoError('Claude API key required. Set it in Settings.');
+      return;
+    }
+
     setPhotoProcessing(true);
-    // Convert to base64 for display; in production, this would be sent to Claude API
+    setPhotoError('');
+    setPhotoResults([]);
+
     const reader = new FileReader();
-    reader.onload = () => {
-      // Simulate API response - in production, send to Claude Vision API
-      setPhotoEstimate('Photo analysis would require Claude API integration. Enter macros manually based on the photo.');
-      setPhotoProcessing(false);
-      setMode('manual');
-      setForm({ ...form, name: file.name.replace(/\.[^.]+$/, '') });
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setPhotoPreview(dataUrl);
+
+      // Extract base64 and media type
+      const match = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
+      if (!match) {
+        setPhotoError('Invalid image format.');
+        setPhotoProcessing(false);
+        return;
+      }
+
+      const mediaType = match[1];
+      const base64Data = match[2];
+
+      try {
+        const results = await analyzeFoodPhoto(settings.claudeApiKey, base64Data, mediaType);
+        setPhotoResults(results);
+
+        // If single result, auto-fill the form
+        if (results.length === 1) {
+          const item = results[0];
+          setForm({
+            name: item.name,
+            proteinG: item.proteinG,
+            carbsG: item.carbsG,
+            fatG: item.fatG,
+            sugarG: item.sugarG,
+            fiberG: item.fiberG,
+          });
+          setMode('manual');
+        }
+      } catch (err) {
+        setPhotoError(err instanceof Error ? err.message : 'Failed to analyze photo');
+      } finally {
+        setPhotoProcessing(false);
+      }
     };
     reader.readAsDataURL(file);
+  };
+
+  const selectPhotoResult = (item: FoodAnalysisResult) => {
+    setForm({
+      name: item.name,
+      proteinG: item.proteinG,
+      carbsG: item.carbsG,
+      fatG: item.fatG,
+      sugarG: item.sugarG,
+      fiberG: item.fiberG,
+    });
+    setMode('manual');
+  };
+
+  const addAllPhotoResults = () => {
+    photoResults.forEach((item) => {
+      addMealEntry({
+        date,
+        mealType,
+        name: item.name,
+        proteinG: item.proteinG,
+        carbsG: item.carbsG,
+        fatG: item.fatG,
+        sugarG: item.sugarG,
+        fiberG: item.fiberG,
+        calories: item.calories,
+      });
+    });
+    onClose();
   };
 
   const save = () => {
@@ -189,28 +259,111 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
         )}
 
         {mode === 'photo' && (
-          <div style={{ marginBottom: 16, textAlign: 'center' }}>
-            <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-              <Camera size={16} /> Take or Upload Photo
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handlePhoto}
-                style={{ display: 'none' }}
-              />
-            </label>
-            {photoProcessing && <p className="text-muted" style={{ marginTop: 8 }}>Processing...</p>}
-            {photoEstimate && (
-              <p className="text-sm" style={{ marginTop: 8, color: 'var(--warning)' }}>
-                {photoEstimate}
+          <div style={{ marginBottom: 16 }}>
+            {!settings.claudeApiKey && (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-sm)',
+                  marginBottom: 12,
+                  fontSize: 13,
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <Settings size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                Claude API key required. Set it in <strong>Settings</strong> to use photo analysis.
+              </div>
+            )}
+
+            <div style={{ textAlign: 'center' }}>
+              <label
+                className={`btn ${settings.claudeApiKey ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ cursor: settings.claudeApiKey ? 'pointer' : 'not-allowed', opacity: settings.claudeApiKey ? 1 : 0.5 }}
+              >
+                <Camera size={16} /> Take or Upload Photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhoto}
+                  style={{ display: 'none' }}
+                  disabled={!settings.claudeApiKey}
+                />
+              </label>
+            </div>
+
+            {photoProcessing && (
+              <div style={{ textAlign: 'center', marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--text-muted)' }}>
+                  <Loader size={16} className="spin" /> Analyzing photo...
+                </div>
+                {photoPreview && (
+                  <img
+                    src={photoPreview}
+                    alt="Uploaded food"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: 150,
+                      borderRadius: 'var(--radius-sm)',
+                      marginTop: 12,
+                      opacity: 0.6,
+                    }}
+                  />
+                )}
+              </div>
+            )}
+
+            {photoError && (
+              <p className="text-sm" style={{ marginTop: 12, color: 'var(--danger)', textAlign: 'center' }}>
+                {photoError}
               </p>
+            )}
+
+            {/* Multiple results from photo */}
+            {photoResults.length > 1 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600 }}>
+                    {photoResults.length} items detected
+                  </p>
+                  <button className="btn btn-primary btn-sm" onClick={addAllPhotoResults}>
+                    <Check size={14} /> Add All
+                  </button>
+                </div>
+                {photoPreview && (
+                  <img
+                    src={photoPreview}
+                    alt="Uploaded food"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: 120,
+                      borderRadius: 'var(--radius-sm)',
+                      marginBottom: 12,
+                    }}
+                  />
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {photoResults.map((item, i) => (
+                    <button
+                      key={i}
+                      className="food-search-item"
+                      onClick={() => selectPhotoResult(item)}
+                    >
+                      <span className="food-search-name">{item.name}</span>
+                      <span className="food-search-macros">
+                        {item.calories} kcal | P:{item.proteinG}g C:{item.carbsG}g F:{item.fatG}g
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}
 
         {/* Manual form (always shown for final entry) */}
-        {(mode === 'manual' || mode === 'photo') && (
+        {(mode === 'manual' || mode === 'photo') && !photoProcessing && photoResults.length <= 1 && (
           <>
             <div className="form-group">
               <label className="label">Name</label>
@@ -297,12 +450,14 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
           </>
         )}
 
-        <div className="modal-actions">
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={save} disabled={!form.name.trim()}>
-            Add Meal
-          </button>
-        </div>
+        {(!photoProcessing && (mode !== 'photo' || photoResults.length <= 1)) && (
+          <div className="modal-actions">
+            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button className="btn btn-primary" onClick={save} disabled={!form.name.trim()}>
+              Add Meal
+            </button>
+          </div>
+        )}
 
         {/* New food sub-modal */}
         {showNewFood && (
