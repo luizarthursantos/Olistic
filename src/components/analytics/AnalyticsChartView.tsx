@@ -110,6 +110,55 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
     };
   }, [chartData, chart.metrics, chart.showMovingAverage]);
 
+  // Compute X-axis ticks: Sundays for short ranges, 1st of month for longer
+  const xTicks = useMemo(() => {
+    if (chartData.length === 0) return [];
+    const dates = chartData.map((d) => d.date as string);
+    const first = dates[0];
+    const last = dates[dates.length - 1];
+    const span = (new Date(last).getTime() - new Date(first).getTime()) / (1000 * 60 * 60 * 24);
+    const dateSet = new Set(dates);
+    const ticks: string[] = [];
+
+    if (span <= 120) {
+      // Weekly: find Sundays within the data range
+      const d = new Date(first + 'T12:00:00');
+      // Advance to the next Sunday
+      d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
+      while (d.toISOString().split('T')[0] <= last) {
+        const ds = d.toISOString().split('T')[0];
+        // Find nearest date in data
+        if (dateSet.has(ds)) {
+          ticks.push(ds);
+        } else {
+          // Find closest date in data
+          const closest = dates.reduce((prev, curr) =>
+            Math.abs(new Date(curr).getTime() - d.getTime()) < Math.abs(new Date(prev).getTime() - d.getTime()) ? curr : prev
+          );
+          if (!ticks.includes(closest)) ticks.push(closest);
+        }
+        d.setDate(d.getDate() + 7);
+      }
+    } else {
+      // Monthly: 1st of each month
+      const startD = new Date(first + 'T12:00:00');
+      const d = new Date(startD.getFullYear(), startD.getMonth() + 1, 1, 12);
+      while (d.toISOString().split('T')[0] <= last) {
+        const ds = d.toISOString().split('T')[0];
+        if (dateSet.has(ds)) {
+          ticks.push(ds);
+        } else {
+          const closest = dates.reduce((prev, curr) =>
+            Math.abs(new Date(curr).getTime() - d.getTime()) < Math.abs(new Date(prev).getTime() - d.getTime()) ? curr : prev
+          );
+          if (!ticks.includes(closest)) ticks.push(closest);
+        }
+        d.setMonth(d.getMonth() + 1);
+      }
+    }
+    return ticks;
+  }, [chartData]);
+
   if (chartData.length === 0) {
     return (
       <div className="text-center text-muted" style={{ padding: 40 }}>
@@ -124,9 +173,10 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
     <div>
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 5 : 5, bottom: 5, left: 0 }}>
-          <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" />
+          <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="date"
+            ticks={xTicks.length > 0 ? xTicks : undefined}
             tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
             tickFormatter={(val: string) => {
               const d = new Date(val + 'T12:00:00');
