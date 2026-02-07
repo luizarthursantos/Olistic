@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { MealType, FoodItem, MEAL_TYPE_LABELS } from '../../types';
 import { calcCaloriesFromMacros } from '../../utils/calculations';
 import { analyzeFoodPhoto, FoodAnalysisResult } from '../../utils/analyzeFood';
-import { X, Search, Camera, Loader, Check, Settings } from 'lucide-react';
+import { X, Search, Camera, Image, Loader, Check, Settings, Send } from 'lucide-react';
 
 interface AddMealModalProps {
   mealType: MealType;
@@ -22,6 +22,9 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   const [photoError, setPhotoError] = useState<string>('');
   const [photoResults, setPhotoResults] = useState<FoodAnalysisResult[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [photoDescription, setPhotoDescription] = useState('');
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -74,9 +77,22 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     setMode('manual');
   };
 
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    setPhotoError('');
+    setPhotoResults([]);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePhotoAnalyze = async () => {
+    if (!photoPreview) return;
 
     if (!settings.claudeApiKey) {
       setPhotoError('Claude API key required. Set it in Settings.');
@@ -87,46 +103,39 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     setPhotoError('');
     setPhotoResults([]);
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      setPhotoPreview(dataUrl);
+    const match = photoPreview.match(/^data:(image\/[^;]+);base64,(.+)$/);
+    if (!match) {
+      setPhotoError('Invalid image format.');
+      setPhotoProcessing(false);
+      return;
+    }
 
-      // Extract base64 and media type
-      const match = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
-      if (!match) {
-        setPhotoError('Invalid image format.');
-        setPhotoProcessing(false);
-        return;
+    const mediaType = match[1];
+    const base64Data = match[2];
+
+    try {
+      const results = await analyzeFoodPhoto(
+        settings.claudeApiKey, base64Data, mediaType, photoDescription || undefined,
+      );
+      setPhotoResults(results);
+
+      if (results.length === 1) {
+        const item = results[0];
+        setForm({
+          name: item.name,
+          proteinG: item.proteinG,
+          carbsG: item.carbsG,
+          fatG: item.fatG,
+          sugarG: item.sugarG,
+          fiberG: item.fiberG,
+        });
+        setMode('manual');
       }
-
-      const mediaType = match[1];
-      const base64Data = match[2];
-
-      try {
-        const results = await analyzeFoodPhoto(settings.claudeApiKey, base64Data, mediaType);
-        setPhotoResults(results);
-
-        // If single result, auto-fill the form
-        if (results.length === 1) {
-          const item = results[0];
-          setForm({
-            name: item.name,
-            proteinG: item.proteinG,
-            carbsG: item.carbsG,
-            fatG: item.fatG,
-            sugarG: item.sugarG,
-            fiberG: item.fiberG,
-          });
-          setMode('manual');
-        }
-      } catch (err) {
-        setPhotoError(err instanceof Error ? err.message : 'Failed to analyze photo');
-      } finally {
-        setPhotoProcessing(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : 'Failed to analyze photo');
+    } finally {
+      setPhotoProcessing(false);
+    }
   };
 
   const selectPhotoResult = (item: FoodAnalysisResult) => {
@@ -276,22 +285,72 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
               </div>
             )}
 
-            <div style={{ textAlign: 'center' }}>
+            {/* Camera and Gallery buttons */}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 12 }}>
               <label
                 className={`btn ${settings.claudeApiKey ? 'btn-primary' : 'btn-secondary'}`}
                 style={{ cursor: settings.claudeApiKey ? 'pointer' : 'not-allowed', opacity: settings.claudeApiKey ? 1 : 0.5 }}
               >
-                <Camera size={16} /> Take or Upload Photo
+                <Camera size={16} /> Camera
                 <input
+                  ref={cameraInputRef}
                   type="file"
                   accept="image/*"
                   capture="environment"
-                  onChange={handlePhoto}
+                  onChange={handlePhotoSelect}
+                  style={{ display: 'none' }}
+                  disabled={!settings.claudeApiKey}
+                />
+              </label>
+              <label
+                className={`btn ${settings.claudeApiKey ? 'btn-secondary' : 'btn-secondary'}`}
+                style={{ cursor: settings.claudeApiKey ? 'pointer' : 'not-allowed', opacity: settings.claudeApiKey ? 1 : 0.5 }}
+              >
+                <Image size={16} /> Gallery
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoSelect}
                   style={{ display: 'none' }}
                   disabled={!settings.claudeApiKey}
                 />
               </label>
             </div>
+
+            {/* Photo preview */}
+            {photoPreview && !photoProcessing && photoResults.length === 0 && (
+              <div style={{ marginTop: 8 }}>
+                <img
+                  src={photoPreview}
+                  alt="Selected food"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: 180,
+                    borderRadius: 'var(--radius-sm)',
+                    display: 'block',
+                    margin: '0 auto 12px',
+                  }}
+                />
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label className="label">Description (optional)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={photoDescription}
+                    onChange={(e) => setPhotoDescription(e.target.value)}
+                    placeholder="e.g., 200g grilled chicken with rice"
+                  />
+                </div>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  onClick={handlePhotoAnalyze}
+                >
+                  <Send size={16} /> Analyze Photo
+                </button>
+              </div>
+            )}
 
             {photoProcessing && (
               <div style={{ textAlign: 'center', marginTop: 16 }}>

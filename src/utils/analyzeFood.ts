@@ -12,7 +12,12 @@ export async function analyzeFoodPhoto(
   apiKey: string,
   imageBase64: string,
   mediaType: string,
+  description?: string,
 ): Promise<FoodAnalysisResult[]> {
+  const descriptionHint = description
+    ? `\n\nThe user provided this description of the image: "${description}". Use this to improve your analysis.`
+    : '';
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -52,7 +57,7 @@ Rules:
 - If multiple items are visible, return one entry per item
 - If it's a single dish, return one entry
 - Use reasonable portion estimates for a single serving
-- Be as accurate as possible`,
+- Be as accurate as possible${descriptionHint}`,
             },
           ],
         },
