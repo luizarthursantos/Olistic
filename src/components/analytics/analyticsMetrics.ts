@@ -69,6 +69,38 @@ interface MetricDataState {
   exercises: Exercise[];
 }
 
+function interpolateBodyEntries(entries: BodyEntry[]): BodyEntry[] {
+  if (entries.length < 2) return entries;
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const result: BodyEntry[] = [];
+
+  for (let i = 0; i < sorted.length; i++) {
+    result.push(sorted[i]);
+    if (i < sorted.length - 1) {
+      const curr = sorted[i];
+      const next = sorted[i + 1];
+      const d1 = new Date(curr.date + 'T12:00:00');
+      const d2 = new Date(next.date + 'T12:00:00');
+      const daysBetween = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+
+      for (let day = 1; day < daysBetween; day++) {
+        const t = day / daysBetween;
+        const interpDate = new Date(d1.getTime() + day * 24 * 60 * 60 * 1000);
+        const dateStr = interpDate.toISOString().split('T')[0];
+        result.push({
+          id: `interp-${dateStr}`,
+          date: dateStr,
+          weightKg: Math.round((curr.weightKg + t * (next.weightKg - curr.weightKg)) * 100) / 100,
+          waistCm: Math.round((curr.waistCm + t * (next.waistCm - curr.waistCm)) * 100) / 100,
+          neckCm: Math.round((curr.neckCm + t * (next.neckCm - curr.neckCm)) * 100) / 100,
+          activityLevel: curr.activityLevel,
+        });
+      }
+    }
+  }
+  return result;
+}
+
 export function getMetricData(
   key: string,
   state: MetricDataState,
@@ -77,54 +109,58 @@ export function getMetricData(
   const { bodyEntries, mealEntries, macroTargets, workoutSessions, settings } = state;
   const age = calcAge(settings.birthday);
 
+  // Use interpolated body entries for all body metrics
+  const isBodyMetric = AVAILABLE_METRICS.find((m) => m.key === key)?.category === 'body';
+  const entries = isBodyMetric ? interpolateBodyEntries(bodyEntries) : bodyEntries;
+
   switch (key) {
     case 'weight':
-      return bodyEntries.map((e) => ({ date: e.date, value: e.weightKg }));
+      return entries.map((e) => ({ date: e.date, value: e.weightKg }));
 
     case 'body_fat_pct':
-      return bodyEntries.map((e) => ({
+      return entries.map((e) => ({
         date: e.date,
         value: calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm),
       }));
 
     case 'body_fat_kg':
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
         return { date: e.date, value: Math.round(e.weightKg * bf / 100 * 10) / 10 };
       });
 
     case 'lean_mass_pct':
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
         return { date: e.date, value: Math.round((100 - bf) * 10) / 10 };
       });
 
     case 'lean_mass_kg':
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
         return { date: e.date, value: Math.round(e.weightKg * (1 - bf / 100) * 10) / 10 };
       });
 
     case 'waist':
-      return bodyEntries.map((e) => ({ date: e.date, value: e.waistCm }));
+      return entries.map((e) => ({ date: e.date, value: e.waistCm }));
 
     case 'neck':
-      return bodyEntries.map((e) => ({ date: e.date, value: e.neckCm }));
+      return entries.map((e) => ({ date: e.date, value: e.neckCm }));
 
     case 'ffmi':
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
         return { date: e.date, value: calcFFMI(e.weightKg, bf, settings.heightCm) };
       });
 
     case 'fat_to_lose_pct':
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
         return { date: e.date, value: Math.max(0, Math.round((bf - settings.targetBodyFatPct) * 10) / 10) };
       });
 
     case 'fat_to_lose_kg':
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
         const currentFatKg = e.weightKg * bf / 100;
         const targetFatKg = e.weightKg * settings.targetBodyFatPct / 100;
@@ -132,7 +168,7 @@ export function getMetricData(
       });
 
     case 'lean_to_gain_pct': {
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
         const currentLeanPct = 100 - bf;
         const targetLeanPct = 100 - settings.targetBodyFatPct;
@@ -141,7 +177,7 @@ export function getMetricData(
     }
 
     case 'lean_to_gain_kg': {
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
         const currentFFMI = calcFFMI(e.weightKg, bf, settings.heightCm);
         const delta = settings.targetFFMI - currentFFMI;
@@ -151,13 +187,13 @@ export function getMetricData(
     }
 
     case 'bmr':
-      return bodyEntries.map((e) => ({
+      return entries.map((e) => ({
         date: e.date,
         value: calcBMR(settings.sex, e.weightKg, settings.heightCm, age),
       }));
 
     case 'tdee':
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bmr = calcBMR(settings.sex, e.weightKg, settings.heightCm, age);
         const workoutCal = workoutSessions
           .filter((s) => s.date === e.date && s.completed)
@@ -166,7 +202,7 @@ export function getMetricData(
       });
 
     case 'caloric_balance': {
-      return bodyEntries.map((e) => {
+      return entries.map((e) => {
         const bmr = calcBMR(settings.sex, e.weightKg, settings.heightCm, age);
         const tdee = calcTDEE(bmr, e.activityLevel);
         const workoutCal = workoutSessions
