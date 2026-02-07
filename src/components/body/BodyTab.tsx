@@ -17,18 +17,24 @@ export function BodyTab() {
   const existingEntry = bodyEntries.find((e) => e.date === selectedDate);
 
   const [form, setForm] = useState({
-    weightKg: existingEntry?.weightKg || 75,
-    waistCm: existingEntry?.waistCm || 80,
-    neckCm: existingEntry?.neckCm || 37,
+    weightKg: String(existingEntry?.weightKg ?? 75),
+    waistCm: String(existingEntry?.waistCm ?? 80),
+    neckCm: String(existingEntry?.neckCm ?? 37),
     activityLevel: existingEntry?.activityLevel || settings.activityLevel,
   });
+
+  const formNum = {
+    weightKg: Number(form.weightKg) || 0,
+    waistCm: Number(form.waistCm) || 0,
+    neckCm: Number(form.neckCm) || 0,
+  };
 
   const openForm = (entry?: BodyEntry) => {
     if (entry) {
       setForm({
-        weightKg: entry.weightKg,
-        waistCm: entry.waistCm,
-        neckCm: entry.neckCm,
+        weightKg: String(entry.weightKg),
+        waistCm: String(entry.waistCm),
+        neckCm: String(entry.neckCm),
         activityLevel: entry.activityLevel,
       });
       setEditEntry(entry);
@@ -36,9 +42,9 @@ export function BodyTab() {
       const existing = bodyEntries.find((e) => e.date === selectedDate);
       if (existing) {
         setForm({
-          weightKg: existing.weightKg,
-          waistCm: existing.waistCm,
-          neckCm: existing.neckCm,
+          weightKg: String(existing.weightKg),
+          waistCm: String(existing.waistCm),
+          neckCm: String(existing.neckCm),
           activityLevel: existing.activityLevel,
         });
       } else {
@@ -47,9 +53,9 @@ export function BodyTab() {
         const last = sorted[0];
         if (last) {
           setForm({
-            weightKg: last.weightKg,
-            waistCm: last.waistCm,
-            neckCm: last.neckCm,
+            weightKg: String(last.weightKg),
+            waistCm: String(last.waistCm),
+            neckCm: String(last.neckCm),
             activityLevel: last.activityLevel,
           });
         }
@@ -62,9 +68,9 @@ export function BodyTab() {
   const saveEntry = () => {
     addBodyEntry({
       date: editEntry?.date || selectedDate,
-      weightKg: form.weightKg,
-      waistCm: form.waistCm,
-      neckCm: form.neckCm,
+      weightKg: formNum.weightKg,
+      waistCm: formNum.waistCm,
+      neckCm: formNum.neckCm,
       activityLevel: form.activityLevel,
     });
     setShowForm(false);
@@ -177,7 +183,7 @@ export function BodyTab() {
                   const bf = calcBodyFatNavy(settings.sex, entry.waistCm, entry.neckCm, settings.heightCm);
                   return (
                     <tr key={entry.id}>
-                      <td>{entry.date}</td>
+                      <td>{entry.date.slice(8,10)}-{entry.date.slice(5,7)}-{entry.date.slice(2,4)}</td>
                       <td>{entry.weightKg}</td>
                       <td>{entry.waistCm}</td>
                       <td>{entry.neckCm}</td>
@@ -224,7 +230,7 @@ export function BodyTab() {
                   type="number"
                   className="input"
                   value={form.weightKg}
-                  onChange={(e) => setForm({ ...form, weightKg: Number(e.target.value) })}
+                  onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
                   step={0.1}
                 />
               </div>
@@ -234,7 +240,7 @@ export function BodyTab() {
                   type="number"
                   className="input"
                   value={form.waistCm}
-                  onChange={(e) => setForm({ ...form, waistCm: Number(e.target.value) })}
+                  onChange={(e) => setForm({ ...form, waistCm: e.target.value })}
                   step={0.1}
                 />
               </div>
@@ -246,7 +252,7 @@ export function BodyTab() {
                   type="number"
                   className="input"
                   value={form.neckCm}
-                  onChange={(e) => setForm({ ...form, neckCm: Number(e.target.value) })}
+                  onChange={(e) => setForm({ ...form, neckCm: e.target.value })}
                   step={0.1}
                 />
               </div>
@@ -269,10 +275,10 @@ export function BodyTab() {
             </div>
 
             {/* Live preview */}
-            {form.waistCm > form.neckCm && (
+            {formNum.waistCm > formNum.neckCm && (
               <div className="body-preview">
-                <span>Body Fat: {calcBodyFatNavy(settings.sex, form.waistCm, form.neckCm, settings.heightCm)}%</span>
-                <span>FFMI: {calcFFMI(form.weightKg, calcBodyFatNavy(settings.sex, form.waistCm, form.neckCm, settings.heightCm), settings.heightCm)}</span>
+                <span>Body Fat: {calcBodyFatNavy(settings.sex, formNum.waistCm, formNum.neckCm, settings.heightCm)}%</span>
+                <span>FFMI: {calcFFMI(formNum.weightKg, calcBodyFatNavy(settings.sex, formNum.waistCm, formNum.neckCm, settings.heightCm), settings.heightCm)}</span>
               </div>
             )}
 
