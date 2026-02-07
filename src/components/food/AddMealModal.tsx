@@ -35,12 +35,39 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
   const [form, setForm] = useState({
     name: '',
+    quantityG: 0,
     proteinG: 0,
     carbsG: 0,
     fatG: 0,
     sugarG: 0,
     fiberG: 0,
   });
+
+  // Base macros per the original quantity — used to scale when user changes quantity
+  const baseMacros = useRef({ quantityG: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 });
+
+  const setFormWithBase = (data: { name: string; quantityG: number; proteinG: number; carbsG: number; fatG: number; sugarG: number; fiberG: number }) => {
+    setForm(data);
+    baseMacros.current = { quantityG: data.quantityG, proteinG: data.proteinG, carbsG: data.carbsG, fatG: data.fatG, sugarG: data.sugarG, fiberG: data.fiberG };
+  };
+
+  const handleQuantityChange = (newQty: number) => {
+    const base = baseMacros.current;
+    if (base.quantityG > 0 && newQty > 0) {
+      const ratio = newQty / base.quantityG;
+      setForm((prev) => ({
+        ...prev,
+        quantityG: newQty,
+        proteinG: Math.round(base.proteinG * ratio * 10) / 10,
+        carbsG: Math.round(base.carbsG * ratio * 10) / 10,
+        fatG: Math.round(base.fatG * ratio * 10) / 10,
+        sugarG: Math.round(base.sugarG * ratio * 10) / 10,
+        fiberG: Math.round(base.fiberG * ratio * 10) / 10,
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, quantityG: newQty }));
+    }
+  };
 
   const [newFood, setNewFood] = useState({
     name: '',
@@ -58,9 +85,16 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     f.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const parseServingGrams = (serving: string): number => {
+    const match = serving.match(/(\d+)\s*g/i);
+    return match ? Number(match[1]) : 100;
+  };
+
   const selectFood = (food: FoodItem) => {
-    setForm({
+    const qty = parseServingGrams(food.servingSize);
+    setFormWithBase({
       name: food.name,
+      quantityG: qty,
       proteinG: food.proteinG,
       carbsG: food.carbsG,
       fatG: food.fatG,
@@ -72,8 +106,10 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
   const saveNewFood = () => {
     addFoodItem(newFood);
-    setForm({
+    const qty = parseServingGrams(newFood.servingSize);
+    setFormWithBase({
       name: newFood.name,
+      quantityG: qty,
       proteinG: newFood.proteinG,
       carbsG: newFood.carbsG,
       fatG: newFood.fatG,
@@ -128,8 +164,9 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
       if (results.length === 1) {
         const item = results[0];
-        setForm({
+        setFormWithBase({
           name: item.name,
+          quantityG: item.quantityG,
           proteinG: item.proteinG,
           carbsG: item.carbsG,
           fatG: item.fatG,
@@ -159,8 +196,9 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
       setAiResults(results);
       if (results.length === 1) {
         const item = results[0];
-        setForm({
+        setFormWithBase({
           name: item.name,
+          quantityG: item.quantityG,
           proteinG: item.proteinG,
           carbsG: item.carbsG,
           fatG: item.fatG,
@@ -177,8 +215,9 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   };
 
   const selectAiResult = (item: FoodAnalysisResult) => {
-    setForm({
+    setFormWithBase({
       name: item.name,
+      quantityG: item.quantityG,
       proteinG: item.proteinG,
       carbsG: item.carbsG,
       fatG: item.fatG,
@@ -194,6 +233,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
         date,
         mealType,
         name: item.name,
+        quantityG: item.quantityG,
         proteinG: item.proteinG,
         carbsG: item.carbsG,
         fatG: item.fatG,
@@ -206,8 +246,9 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   };
 
   const selectPhotoResult = (item: FoodAnalysisResult) => {
-    setForm({
+    setFormWithBase({
       name: item.name,
+      quantityG: item.quantityG,
       proteinG: item.proteinG,
       carbsG: item.carbsG,
       fatG: item.fatG,
@@ -223,6 +264,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
         date,
         mealType,
         name: item.name,
+        quantityG: item.quantityG,
         proteinG: item.proteinG,
         carbsG: item.carbsG,
         fatG: item.fatG,
@@ -240,6 +282,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
       date,
       mealType,
       name: form.name,
+      quantityG: form.quantityG || undefined,
       proteinG: form.proteinG,
       carbsG: form.carbsG,
       fatG: form.fatG,
@@ -606,15 +649,28 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
         {/* Manual form (always shown for final entry) */}
         {(mode === 'manual' || mode === 'photo' || mode === 'ai') && !photoProcessing && !aiProcessing && photoResults.length <= 1 && aiResults.length <= 1 && (
           <>
-            <div className="form-group">
-              <label className="label">Name</label>
-              <input
-                type="text"
-                className="input"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g., Chicken breast"
-              />
+            <div className="form-row">
+              <div className="form-group" style={{ flex: 2 }}>
+                <label className="label">Name</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g., Chicken breast"
+                />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="label">Qty (g)</label>
+                <input
+                  type="number"
+                  className="input"
+                  value={form.quantityG || ''}
+                  onChange={(e) => handleQuantityChange(Number(e.target.value))}
+                  min={0}
+                  placeholder="g"
+                />
+              </div>
             </div>
             <div className="form-row">
               <div className="form-group">

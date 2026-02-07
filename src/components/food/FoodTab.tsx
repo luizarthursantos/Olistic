@@ -247,6 +247,7 @@ export function FoodTab() {
             <thead>
               <tr>
                 <th className="col-name">Name</th>
+                <th className="col-num">Qty</th>
                 <th className="col-num">kcal</th>
                 <th className="col-num">P (g)</th>
                 <th className="col-num">C (g)</th>
@@ -265,6 +266,7 @@ export function FoodTab() {
                     <td className="col-name">
                       <span className="meal-section-name">{MEAL_TYPE_LABELS[type]}</span>
                     </td>
+                    <td className="col-num meal-subtotal-val"></td>
                     <td className="col-num meal-subtotal-val">{sub.calories > 0 ? sub.calories : ''}</td>
                     <td className="col-num meal-subtotal-val">{sub.proteinG > 0 ? sub.proteinG.toFixed(0) : ''}</td>
                     <td className="col-num meal-subtotal-val">{sub.carbsG > 0 ? sub.carbsG.toFixed(0) : ''}</td>
@@ -280,6 +282,7 @@ export function FoodTab() {
                   ...typeMeals.map((meal) => (
                     <tr key={meal.id} className="meal-item-row">
                       <td className="col-name">{meal.name}</td>
+                      <td className="col-num">{meal.quantityG ? `${meal.quantityG}g` : ''}</td>
                       <td className="col-num">{meal.calories}</td>
                       <td className="col-num">{meal.proteinG}</td>
                       <td className="col-num">{meal.carbsG}</td>
@@ -301,7 +304,7 @@ export function FoodTab() {
                   ...(typeMeals.length === 0
                     ? [
                         <tr key={`empty-${type}`} className="meal-empty-row">
-                          <td colSpan={8} className="text-muted text-sm">No items</td>
+                          <td colSpan={9} className="text-muted text-sm">No items</td>
                         </tr>,
                       ]
                     : []),

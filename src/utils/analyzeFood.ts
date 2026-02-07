@@ -1,5 +1,6 @@
 export interface FoodAnalysisResult {
   name: string;
+  quantityG: number;
   calories: number;
   proteinG: number;
   carbsG: number;
@@ -31,11 +32,12 @@ export async function analyzeFoodDescription(
 "${description}"
 
 Return ONLY a JSON array (no markdown, no explanation) of food items with this structure:
-[{"name": "Food name", "calories": 0, "proteinG": 0, "carbsG": 0, "fatG": 0, "sugarG": 0, "fiberG": 0}]
+[{"name": "Food name", "quantityG": 0, "calories": 0, "proteinG": 0, "carbsG": 0, "fatG": 0, "sugarG": 0, "fiberG": 0}]
 
 Rules:
 - All numbers should be integers (round to nearest whole number)
-- calories should be the total kcal value
+- quantityG is the estimated weight in grams of the portion
+- calories should be the total kcal value for that portion
 - If multiple items are described, return one entry per item
 - If it's a single dish, return one entry
 - Use the portion sizes mentioned, or reasonable defaults if not specified
@@ -61,6 +63,7 @@ Rules:
   const items: FoodAnalysisResult[] = JSON.parse(jsonMatch[0]);
   return items.map((item) => ({
     name: String(item.name || 'Unknown food'),
+    quantityG: Math.round(Number(item.quantityG) || 0),
     calories: Math.round(Number(item.calories) || 0),
     proteinG: Math.round(Number(item.proteinG) || 0),
     carbsG: Math.round(Number(item.carbsG) || 0),
@@ -111,11 +114,12 @@ If it's a photo of food: estimate the nutritional content based on what you see,
 If it's a nutritional label: extract the exact values shown.
 
 Return ONLY a JSON array (no markdown, no explanation) of food items with this structure:
-[{"name": "Food name", "calories": 0, "proteinG": 0, "carbsG": 0, "fatG": 0, "sugarG": 0, "fiberG": 0}]
+[{"name": "Food name", "quantityG": 0, "calories": 0, "proteinG": 0, "carbsG": 0, "fatG": 0, "sugarG": 0, "fiberG": 0}]
 
 Rules:
 - All numbers should be integers (round to nearest whole number)
-- calories should be the total kcal value
+- quantityG is the estimated weight in grams of the portion
+- calories should be the total kcal value for that portion
 - If multiple items are visible, return one entry per item
 - If it's a single dish, return one entry
 - Use reasonable portion estimates for a single serving
@@ -144,6 +148,7 @@ Rules:
   const items: FoodAnalysisResult[] = JSON.parse(jsonMatch[0]);
   return items.map((item) => ({
     name: String(item.name || 'Unknown food'),
+    quantityG: Math.round(Number(item.quantityG) || 0),
     calories: Math.round(Number(item.calories) || 0),
     proteinG: Math.round(Number(item.proteinG) || 0),
     carbsG: Math.round(Number(item.carbsG) || 0),

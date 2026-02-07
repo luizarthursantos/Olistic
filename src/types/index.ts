@@ -54,6 +54,7 @@ export interface MealEntry {
   date: string;
   mealType: MealType;
   name: string;
+  quantityG?: number;
   proteinG: number;
   carbsG: number;
   fatG: number;
