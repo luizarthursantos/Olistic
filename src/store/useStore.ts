@@ -267,8 +267,11 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Sample data
   loadSampleData: () => {
-    const data = generateAllSampleData(get().exercises);
+    // Reset exercises to defaults so IDs are stable
+    const exercises = DEFAULT_EXERCISES;
+    const data = generateAllSampleData(exercises);
     set({
+      exercises,
       bodyEntries: data.bodyEntries,
       foodItems: data.foodItems,
       mealEntries: data.mealEntries,
@@ -277,6 +280,7 @@ export const useStore = create<AppState>((set, get) => ({
       workoutSessions: data.workoutSessions,
       analyticsCharts: data.analyticsCharts,
     });
+    saveToStorage('exercises', exercises);
     saveToStorage('bodyEntries', data.bodyEntries);
     saveToStorage('foodItems', data.foodItems);
     saveToStorage('mealEntries', data.mealEntries);

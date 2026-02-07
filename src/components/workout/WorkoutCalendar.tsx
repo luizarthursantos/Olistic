@@ -2,7 +2,11 @@ import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export function WorkoutCalendar() {
+interface WorkoutCalendarProps {
+  onViewSession?: (sessionId: string) => void;
+}
+
+export function WorkoutCalendar({ onViewSession }: WorkoutCalendarProps) {
   const { workoutSessions, workoutTemplates } = useStore();
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -65,7 +69,7 @@ export function WorkoutCalendar() {
   }, [currentMonth]);
 
   const sessionsByDate = useMemo(() => {
-    const map: Record<string, { color: string; name: string }[]> = {};
+    const map: Record<string, { color: string; name: string; sessionId: string }[]> = {};
     workoutSessions
       .filter((s) => s.completed)
       .forEach((session) => {
@@ -74,6 +78,7 @@ export function WorkoutCalendar() {
         map[session.date].push({
           color: template?.color || '#6c63ff',
           name: template?.name || 'Workout',
+          sessionId: session.id,
         });
       });
     return map;
@@ -106,18 +111,28 @@ export function WorkoutCalendar() {
         ))}
         {calendarDays.map((day, i) => {
           const sessions = sessionsByDate[day.date] || [];
+          const hasWorkout = sessions.length > 0;
           return (
             <div
               key={i}
-              className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.date === today ? 'today' : ''}`}
-              title={sessions.map((s) => s.name).join(', ')}
+              className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.date === today ? 'today' : ''} ${hasWorkout ? 'has-workout' : ''}`}
             >
-              <span>{day.day}</span>
-              {sessions.length > 0 && (
-                <div style={{ display: 'flex', gap: 2 }}>
-                  {sessions.slice(0, 3).map((s, j) => (
-                    <div key={j} className="calendar-day-dot" style={{ background: s.color }} />
+              <span className="calendar-day-number">{day.day}</span>
+              {hasWorkout && (
+                <div className="calendar-day-workouts">
+                  {sessions.slice(0, 2).map((s, j) => (
+                    <div
+                      key={j}
+                      className="calendar-workout-label"
+                      style={{ background: s.color }}
+                      onClick={() => onViewSession?.(s.sessionId)}
+                    >
+                      {s.name}
+                    </div>
                   ))}
+                  {sessions.length > 2 && (
+                    <div className="calendar-workout-more">+{sessions.length - 2}</div>
+                  )}
                 </div>
               )}
             </div>

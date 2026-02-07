@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
-import { Plus, Play, Calendar, Clock, Trash2, Edit3 } from 'lucide-react';
+import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye } from 'lucide-react';
 import { WorkoutTemplate, WorkoutSession } from '../../types';
 import { WorkoutTemplateModal } from './WorkoutTemplateModal';
 import { WorkoutExecution } from './WorkoutExecution';
@@ -169,6 +169,14 @@ export function WorkoutTab() {
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
+                      {session.completed && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => setActiveSession(session.id)}
+                        >
+                          <Eye size={14} /> View
+                        </button>
+                      )}
                       {!session.completed && (
                         <button
                           className="btn btn-primary btn-sm"
@@ -192,7 +200,9 @@ export function WorkoutTab() {
         </>
       )}
 
-      {view === 'calendar' && <WorkoutCalendar />}
+      {view === 'calendar' && (
+        <WorkoutCalendar onViewSession={(sessionId) => setActiveSession(sessionId)} />
+      )}
 
       {showTemplateModal && (
         <WorkoutTemplateModal

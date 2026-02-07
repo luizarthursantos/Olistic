@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, Save } from 'lucide-react';
 
 interface WorkoutExecutionProps {
   templateId: string;
@@ -25,6 +25,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   const existingSession = existingSessionId
     ? workoutSessions.find((s) => s.id === existingSessionId)
     : null;
+  const isViewingCompleted = existingSession?.completed === true;
 
   const [sessionId, setSessionId] = useState<string | null>(existingSessionId || null);
   const [exerciseSessions, setExerciseSessions] = useState<WorkoutExerciseSession[]>(() => {
@@ -54,12 +55,23 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   const [startTime] = useState(() => existingSession?.startTime || new Date().toISOString());
   const [elapsed, setElapsed] = useState(0);
 
+  // Compute static duration for completed sessions
+  const completedDuration = useMemo(() => {
+    if (isViewingCompleted && existingSession?.startTime && existingSession?.endTime) {
+      return Math.floor(
+        (new Date(existingSession.endTime).getTime() - new Date(existingSession.startTime).getTime()) / 1000
+      );
+    }
+    return 0;
+  }, [isViewingCompleted, existingSession]);
+
   useEffect(() => {
+    if (isViewingCompleted) return; // Don't run timer for completed sessions
     const interval = setInterval(() => {
       setElapsed(Math.floor((Date.now() - new Date(startTime).getTime()) / 1000));
     }, 1000);
     return () => clearInterval(interval);
-  }, [startTime]);
+  }, [startTime, isViewingCompleted]);
 
   // Get previous session for this template
   const previousSession = useMemo(() => {
@@ -74,9 +86,9 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
     return sorted[0]?.weightKg || 75;
   }, [bodyEntries]);
 
-  // Initialize session if new
+  // Initialize session if new (not for viewing completed sessions)
   useEffect(() => {
-    if (!sessionId && template) {
+    if (!sessionId && template && !isViewingCompleted) {
       const today = new Date().toISOString().split('T')[0];
       const id = addWorkoutSession({
         templateId,
@@ -142,28 +154,36 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
     });
   };
 
-  const finishWorkout = () => {
-    if (!sessionId) return;
-    // Calculate total calories
-    const durationMin = elapsed / 60;
+  const calcTotalCalories = () => {
     let totalCalories = 0;
-
     exerciseSessions.forEach((exSession) => {
       const exercise = exercises.find((e) => e.id === exSession.exerciseId);
       if (exercise?.isCardio && exSession.cardioMinutes) {
         totalCalories += estimateCardioCalories(latestWeight, exSession.cardioMinutes, exercise.name);
       } else {
-        // Estimate from total lifting time
         const completedSets = exSession.sets.filter((s) => s.completed).length;
         totalCalories += estimateWorkoutCalories(latestWeight, completedSets * 1.5, false);
       }
     });
+    return Math.round(totalCalories);
+  };
 
+  const finishWorkout = () => {
+    if (!sessionId) return;
     updateWorkoutSession(sessionId, {
       exercises: exerciseSessions,
       endTime: new Date().toISOString(),
       completed: true,
-      estimatedCalories: Math.round(totalCalories),
+      estimatedCalories: calcTotalCalories(),
+    });
+    onFinish();
+  };
+
+  const saveEdits = () => {
+    if (!sessionId) return;
+    updateWorkoutSession(sessionId, {
+      exercises: exerciseSessions,
+      estimatedCalories: calcTotalCalories(),
     });
     onFinish();
   };
@@ -202,12 +222,21 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   return (
     <div className="workout-execution fade-in">
       <div className="workout-exec-header">
-        <button className="btn btn-secondary btn-sm" onClick={saveProgress}>
+        <button className="btn btn-secondary btn-sm" onClick={isViewingCompleted ? onFinish : saveProgress}>
           <ArrowLeft size={14} /> Back
         </button>
         <h2 className="workout-exec-title">{template.name}</h2>
-        <span className="workout-exec-timer">{formatTime(elapsed)}</span>
+        <span className="workout-exec-timer">
+          {isViewingCompleted
+            ? formatTime(completedDuration)
+            : formatTime(elapsed)}
+        </span>
       </div>
+      {isViewingCompleted && existingSession && (
+        <div className="workout-completed-badge">
+          {existingSession.date} · {existingSession.estimatedCalories} kcal
+        </div>
+      )}
 
       {exerciseSessions.map((exSession, exIdx) => (
         <div key={exIdx} className="exercise-card">
@@ -299,13 +328,23 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
         </div>
       ))}
 
-      <button
-        className="btn btn-primary"
-        style={{ width: '100%', marginTop: 16, padding: 14, fontSize: 16 }}
-        onClick={finishWorkout}
-      >
-        <Check size={18} /> Finish Workout
-      </button>
+      {isViewingCompleted ? (
+        <button
+          className="btn btn-primary"
+          style={{ width: '100%', marginTop: 16, padding: 14, fontSize: 16 }}
+          onClick={saveEdits}
+        >
+          <Save size={18} /> Save Changes
+        </button>
+      ) : (
+        <button
+          className="btn btn-primary"
+          style={{ width: '100%', marginTop: 16, padding: 14, fontSize: 16 }}
+          onClick={finishWorkout}
+        >
+          <Check size={18} /> Finish Workout
+        </button>
+      )}
     </div>
   );
 }
