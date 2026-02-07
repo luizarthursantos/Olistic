@@ -22,7 +22,7 @@ const SHEETS: SheetDef[] = [
   { key: 'analyticsCharts', sheetName: 'Analytics Charts', isArray: true, jsonCols: ['metrics'] },
 ];
 
-export function exportToXlsx(): Uint8Array {
+export function exportToXlsx(): ArrayBuffer {
   const wb = XLSX.utils.book_new();
 
   for (const sheet of SHEETS) {
@@ -81,7 +81,7 @@ export function exportToXlsx(): Uint8Array {
     }
   }
 
-  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array;
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
 }
 
 export function importFromXlsx(buffer: ArrayBuffer): boolean {
