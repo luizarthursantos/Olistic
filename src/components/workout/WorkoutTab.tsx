@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
-import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye } from 'lucide-react';
+import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye, Pencil } from 'lucide-react';
 import { WorkoutTemplate, WorkoutSession } from '../../types';
 import { WorkoutTemplateModal } from './WorkoutTemplateModal';
 import { WorkoutExecution } from './WorkoutExecution';
 import { WorkoutCalendar } from './WorkoutCalendar';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import './WorkoutTab.css';
 
 type WorkoutView = 'history' | 'calendar';
@@ -23,6 +24,9 @@ export function WorkoutTab() {
   const [editTemplate, setEditTemplate] = useState<WorkoutTemplate | null>(null);
   const [activeSession, setActiveSession] = useState<string | null>(null);
   const [startTemplateId, setStartTemplateId] = useState<string | null>(null);
+  const [editModeTemplates, setEditModeTemplates] = useState(false);
+  const [editModeHistory, setEditModeHistory] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'template' | 'session'; id: string } | null>(null);
 
   const sortedSessions = useMemo(() => {
     return [...workoutSessions].sort((a, b) => b.date.localeCompare(a.date));
@@ -43,6 +47,16 @@ export function WorkoutTab() {
 
   const getTemplateColor = (templateId: string) => {
     return workoutTemplates.find((t) => t.id === templateId)?.color || '#6c63ff';
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === 'template') {
+      deleteWorkoutTemplate(deleteConfirm.id);
+    } else {
+      deleteWorkoutSession(deleteConfirm.id);
+    }
+    setDeleteConfirm(null);
   };
 
   // If executing a workout
@@ -92,12 +106,22 @@ export function WorkoutTab() {
           <div className="workout-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600 }}>My Workouts</h3>
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => { setEditTemplate(null); setShowTemplateModal(true); }}
-              >
-                <Plus size={14} /> New Workout
-              </button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {workoutTemplates.length > 0 && (
+                  <button
+                    className={`btn btn-sm ${editModeTemplates ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setEditModeTemplates(!editModeTemplates)}
+                  >
+                    <Pencil size={14} /> {editModeTemplates ? 'Done' : 'Edit'}
+                  </button>
+                )}
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => { setEditTemplate(null); setShowTemplateModal(true); }}
+                >
+                  <Plus size={14} /> New
+                </button>
+              </div>
             </div>
 
             {workoutTemplates.length === 0 ? (
@@ -125,18 +149,22 @@ export function WorkoutTab() {
                       >
                         <Play size={14} /> Start
                       </button>
-                      <button
-                        className="btn btn-icon btn-secondary btn-sm"
-                        onClick={() => openEditTemplate(template)}
-                      >
-                        <Edit3 size={14} />
-                      </button>
-                      <button
-                        className="btn btn-icon btn-danger btn-sm"
-                        onClick={() => deleteWorkoutTemplate(template.id)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {editModeTemplates && (
+                        <>
+                          <button
+                            className="btn btn-icon btn-secondary btn-sm"
+                            onClick={() => openEditTemplate(template)}
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            className="btn btn-icon btn-danger btn-sm"
+                            onClick={() => setDeleteConfirm({ type: 'template', id: template.id })}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -146,7 +174,17 @@ export function WorkoutTab() {
 
           {/* History */}
           <div className="workout-section" style={{ marginTop: 24 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>History</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600 }}>History</h3>
+              {sortedSessions.length > 0 && (
+                <button
+                  className={`btn btn-sm ${editModeHistory ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setEditModeHistory(!editModeHistory)}
+                >
+                  <Pencil size={14} /> {editModeHistory ? 'Done' : 'Edit'}
+                </button>
+              )}
+            </div>
             {sortedSessions.length === 0 ? (
               <div className="empty-state" style={{ padding: '30px 20px' }}>
                 <p className="text-muted">No workouts completed yet</p>
@@ -185,12 +223,14 @@ export function WorkoutTab() {
                           Resume
                         </button>
                       )}
-                      <button
-                        className="btn btn-icon btn-danger btn-sm"
-                        onClick={() => deleteWorkoutSession(session.id)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {editModeHistory && (
+                        <button
+                          className="btn btn-icon btn-danger btn-sm"
+                          onClick={() => setDeleteConfirm({ type: 'session', id: session.id })}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -208,6 +248,18 @@ export function WorkoutTab() {
         <WorkoutTemplateModal
           template={editTemplate}
           onClose={() => { setShowTemplateModal(false); setEditTemplate(null); }}
+        />
+      )}
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          message={
+            deleteConfirm.type === 'template'
+              ? 'Are you sure you want to delete this workout template?'
+              : 'Are you sure you want to delete this workout session?'
+          }
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteConfirm(null)}
         />
       )}
     </div>

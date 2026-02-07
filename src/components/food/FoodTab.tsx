@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { DateSelector } from '../common/DateSelector';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { MealType, MEAL_TYPE_LABELS } from '../../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Plus, Trash2, Target } from 'lucide-react';
+import { Plus, Trash2, Target, Pencil } from 'lucide-react';
 import { AddMealModal } from './AddMealModal';
 import { MacroTargetsModal } from './MacroTargetsModal';
 import './FoodTab.css';
@@ -21,6 +22,8 @@ export function FoodTab() {
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [addMealType, setAddMealType] = useState<MealType>('breakfast');
   const [showTargets, setShowTargets] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const meals = getMealsForDate(selectedDate);
   const targets = getMacroTargetsForDate(selectedDate);
@@ -91,6 +94,11 @@ export function FoodTab() {
   const openAddMeal = (type: MealType) => {
     setAddMealType(type);
     setShowAddMeal(true);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMealEntry(id);
+    setDeleteConfirm(null);
   };
 
   const calRemaining = targets ? targets.calories - totals.calories : 0;
@@ -225,6 +233,15 @@ export function FoodTab() {
 
       {/* Unified meal table */}
       <div className="meal-table-container">
+        <div className="meal-table-header-bar">
+          <span style={{ fontSize: 14, fontWeight: 600 }}>Meals</span>
+          <button
+            className={`btn btn-sm ${editMode ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setEditMode(!editMode)}
+          >
+            <Pencil size={13} /> {editMode ? 'Done' : 'Edit'}
+          </button>
+        </div>
         <div className="table-wrapper">
           <table className="meal-table">
             <thead>
@@ -272,12 +289,14 @@ export function FoodTab() {
                       <td className="col-num">{meal.sugarG}g</td>
                       <td className="col-num">{meal.fiberG}g</td>
                       <td className="col-action">
-                        <button
-                          className="btn btn-icon btn-danger btn-sm"
-                          onClick={() => deleteMealEntry(meal.id)}
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        {editMode && (
+                          <button
+                            className="btn btn-icon btn-danger btn-sm"
+                            onClick={() => setDeleteConfirm(meal.id)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )),
@@ -307,6 +326,14 @@ export function FoodTab() {
         <MacroTargetsModal
           date={selectedDate}
           onClose={() => setShowTargets(false)}
+        />
+      )}
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          message="Are you sure you want to delete this meal entry?"
+          onConfirm={() => handleDelete(deleteConfirm)}
+          onCancel={() => setDeleteConfirm(null)}
         />
       )}
     </div>

@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { DateSelector } from '../common/DateSelector';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { calcBodyFatNavy, calcFFMI, calcBMR, calcTDEE, calcAge } from '../../utils/calculations';
-import { Plus, Trash2, Edit3 } from 'lucide-react';
+import { Plus, Trash2, Edit3, Pencil } from 'lucide-react';
 import { BodyEntry, ACTIVITY_LABELS, ActivityLevel } from '../../types';
 import './BodyTab.css';
 
@@ -10,6 +11,8 @@ export function BodyTab() {
   const { bodyEntries, addBodyEntry, deleteBodyEntry, selectedDate, settings } = useStore();
   const [showForm, setShowForm] = useState(false);
   const [editEntry, setEditEntry] = useState<BodyEntry | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const existingEntry = bodyEntries.find((e) => e.date === selectedDate);
 
@@ -66,6 +69,11 @@ export function BodyTab() {
     });
     setShowForm(false);
     setEditEntry(null);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteBodyEntry(id);
+    setDeleteConfirm(null);
   };
 
   // Calculate stats for the current entry
@@ -143,7 +151,15 @@ export function BodyTab() {
 
       {recentEntries.length > 0 && (
         <div className="card" style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Recent Entries</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600 }}>Recent Entries</h3>
+            <button
+              className={`btn btn-sm ${editMode ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setEditMode(!editMode)}
+            >
+              <Pencil size={14} /> {editMode ? 'Done' : 'Edit'}
+            </button>
+          </div>
           <div className="table-wrapper">
             <table>
               <thead>
@@ -153,7 +169,7 @@ export function BodyTab() {
                   <th>Waist</th>
                   <th>Neck</th>
                   <th>BF%</th>
-                  <th></th>
+                  {editMode && <th></th>}
                 </tr>
               </thead>
               <tbody>
@@ -166,24 +182,26 @@ export function BodyTab() {
                       <td>{entry.waistCm} cm</td>
                       <td>{entry.neckCm} cm</td>
                       <td>{bf}%</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button
-                            className="btn btn-icon btn-secondary btn-sm"
-                            onClick={() => openForm(entry)}
-                            title="Edit"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <button
-                            className="btn btn-icon btn-danger btn-sm"
-                            onClick={() => deleteBodyEntry(entry.id)}
-                            title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
+                      {editMode && (
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              className="btn btn-icon btn-secondary btn-sm"
+                              onClick={() => openForm(entry)}
+                              title="Edit"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
+                              className="btn btn-icon btn-danger btn-sm"
+                              onClick={() => setDeleteConfirm(entry.id)}
+                              title="Delete"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -268,6 +286,14 @@ export function BodyTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          message="Are you sure you want to delete this body entry?"
+          onConfirm={() => handleDelete(deleteConfirm)}
+          onCancel={() => setDeleteConfirm(null)}
+        />
       )}
     </div>
   );
