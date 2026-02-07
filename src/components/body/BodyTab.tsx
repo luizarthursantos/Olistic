@@ -82,21 +82,51 @@ export function BodyTab() {
     setDeleteConfirm(null);
   };
 
-  // Calculate stats for the current entry
-  const stats = useMemo(() => {
-    const entry = bodyEntries.find((e) => e.date === selectedDate);
-    if (!entry) return null;
+  // Interpolate a body entry for the selected date if no exact entry exists
+  const interpolatedEntry = useMemo(() => {
+    const exact = bodyEntries.find((e) => e.date === selectedDate);
+    if (exact) return exact;
+    if (bodyEntries.length === 0) return null;
 
-    const bodyFat = calcBodyFatNavy(settings.sex, entry.waistCm, entry.neckCm, settings.heightCm);
-    const ffmi = calcFFMI(entry.weightKg, bodyFat, settings.heightCm);
+    const sorted = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
+    const before = sorted.filter((e) => e.date < selectedDate).pop();
+    const after = sorted.find((e) => e.date > selectedDate);
+
+    if (before && after) {
+      const d1 = new Date(before.date + 'T12:00:00').getTime();
+      const d2 = new Date(after.date + 'T12:00:00').getTime();
+      const dt = new Date(selectedDate + 'T12:00:00').getTime();
+      const t = (dt - d1) / (d2 - d1);
+      return {
+        id: 'interpolated',
+        date: selectedDate,
+        weightKg: Math.round((before.weightKg + t * (after.weightKg - before.weightKg)) * 100) / 100,
+        waistCm: Math.round((before.waistCm + t * (after.waistCm - before.waistCm)) * 100) / 100,
+        neckCm: Math.round((before.neckCm + t * (after.neckCm - before.neckCm)) * 100) / 100,
+        activityLevel: before.activityLevel,
+      } as BodyEntry;
+    }
+
+    // Only data on one side — use the nearest entry
+    return before || after || null;
+  }, [bodyEntries, selectedDate]);
+
+  const isInterpolated = interpolatedEntry ? !bodyEntries.some((e) => e.date === selectedDate) : false;
+
+  // Calculate stats for the current (or interpolated) entry
+  const stats = useMemo(() => {
+    if (!interpolatedEntry) return null;
+
+    const bodyFat = calcBodyFatNavy(settings.sex, interpolatedEntry.waistCm, interpolatedEntry.neckCm, settings.heightCm);
+    const ffmi = calcFFMI(interpolatedEntry.weightKg, bodyFat, settings.heightCm);
     const age = calcAge(settings.birthday);
-    const bmr = calcBMR(settings.sex, entry.weightKg, settings.heightCm, age);
-    const tdee = calcTDEE(bmr, entry.activityLevel);
-    const leanMassKg = entry.weightKg * (1 - bodyFat / 100);
-    const fatMassKg = entry.weightKg * (bodyFat / 100);
+    const bmr = calcBMR(settings.sex, interpolatedEntry.weightKg, settings.heightCm, age);
+    const tdee = calcTDEE(bmr, interpolatedEntry.activityLevel);
+    const leanMassKg = interpolatedEntry.weightKg * (1 - bodyFat / 100);
+    const fatMassKg = interpolatedEntry.weightKg * (bodyFat / 100);
 
     return { bodyFat, ffmi, bmr, tdee, leanMassKg, fatMassKg };
-  }, [bodyEntries, selectedDate, settings]);
+  }, [interpolatedEntry, settings]);
 
   const recentEntries = useMemo(() => {
     return [...bodyEntries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
@@ -107,9 +137,15 @@ export function BodyTab() {
       <DateSelector />
 
       {stats ? (
-        <div className="body-stats-grid">
+        <div>
+          {isInterpolated && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 8, fontStyle: 'italic' }}>
+              Estimated from nearby entries
+            </div>
+          )}
+          <div className="body-stats-grid">
           <div className="stat-card">
-            <div className="stat-card-value">{bodyEntries.find(e => e.date === selectedDate)?.weightKg} kg</div>
+            <div className="stat-card-value">{interpolatedEntry?.weightKg} kg</div>
             <div className="stat-card-label">Weight</div>
           </div>
           <div className="stat-card">
@@ -142,11 +178,12 @@ export function BodyTab() {
             </div>
             <div className="stat-card-label">Fat to Lose</div>
           </div>
+          </div>
         </div>
       ) : (
         <div className="empty-state" style={{ padding: '40px 20px' }}>
           <p style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
-            No entry for this date
+            No data available
           </p>
         </div>
       )}

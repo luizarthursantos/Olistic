@@ -89,6 +89,13 @@ export function importFromXlsx(buffer: ArrayBuffer): boolean {
   try {
     const wb = XLSX.read(buffer, { type: 'array' });
 
+    // Clear all data stores first so removed rows don't persist
+    for (const sheet of SHEETS) {
+      if (sheet.isArray) {
+        localStorage.setItem(STORAGE_PREFIX + sheet.key, JSON.stringify([]));
+      }
+    }
+
     for (const sheet of SHEETS) {
       const ws = wb.Sheets[sheet.sheetName];
       if (!ws) continue;
