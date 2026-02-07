@@ -2,9 +2,9 @@ import { useState, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { MealType, FoodItem, MEAL_TYPE_LABELS } from '../../types';
 import { calcCaloriesFromMacros } from '../../utils/calculations';
-import { analyzeFoodPhoto, FoodAnalysisResult } from '../../utils/analyzeFood';
+import { analyzeFoodPhoto, analyzeFoodDescription, FoodAnalysisResult } from '../../utils/analyzeFood';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { X, Search, Camera, Image, Loader, Check, Settings, Send, Trash2, Pencil } from 'lucide-react';
+import { X, Search, Camera, Image, Loader, Check, Settings, Send, Trash2, Pencil, Sparkles } from 'lucide-react';
 
 interface AddMealModalProps {
   mealType: MealType;
@@ -12,7 +12,7 @@ interface AddMealModalProps {
   onClose: () => void;
 }
 
-type AddMode = 'manual' | 'search' | 'photo';
+type AddMode = 'manual' | 'search' | 'photo' | 'ai';
 
 export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   const { addMealEntry, foodItems, addFoodItem, deleteFoodItem, settings } = useStore();
@@ -26,6 +26,10 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   const [photoResults, setPhotoResults] = useState<FoodAnalysisResult[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [photoDescription, setPhotoDescription] = useState('');
+  const [aiDescription, setAiDescription] = useState('');
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiResults, setAiResults] = useState<FoodAnalysisResult[]>([]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,6 +145,66 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     }
   };
 
+  const handleAiAnalyze = async () => {
+    if (!aiDescription.trim()) return;
+    if (!settings.claudeApiKey) {
+      setAiError('Claude API key required. Set it in Settings.');
+      return;
+    }
+    setAiProcessing(true);
+    setAiError('');
+    setAiResults([]);
+    try {
+      const results = await analyzeFoodDescription(settings.claudeApiKey, aiDescription);
+      setAiResults(results);
+      if (results.length === 1) {
+        const item = results[0];
+        setForm({
+          name: item.name,
+          proteinG: item.proteinG,
+          carbsG: item.carbsG,
+          fatG: item.fatG,
+          sugarG: item.sugarG,
+          fiberG: item.fiberG,
+        });
+        setMode('manual');
+      }
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Failed to analyze food');
+    } finally {
+      setAiProcessing(false);
+    }
+  };
+
+  const selectAiResult = (item: FoodAnalysisResult) => {
+    setForm({
+      name: item.name,
+      proteinG: item.proteinG,
+      carbsG: item.carbsG,
+      fatG: item.fatG,
+      sugarG: item.sugarG,
+      fiberG: item.fiberG,
+    });
+    setMode('manual');
+  };
+
+  const addAllAiResults = () => {
+    aiResults.forEach((item) => {
+      addMealEntry({
+        date,
+        mealType,
+        name: item.name,
+        proteinG: item.proteinG,
+        carbsG: item.carbsG,
+        fatG: item.fatG,
+        sugarG: item.sugarG,
+        fiberG: item.fiberG,
+        calories: item.calories,
+      });
+    });
+    onClose();
+  };
+
   const selectPhotoResult = (item: FoodAnalysisResult) => {
     setForm({
       name: item.name,
@@ -211,6 +275,12 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
             onClick={() => setMode('search')}
           >
             <Search size={14} /> Search Food
+          </button>
+          <button
+            className={`tab-btn ${mode === 'ai' ? 'active' : ''}`}
+            onClick={() => setMode('ai')}
+          >
+            <Sparkles size={14} /> AI
           </button>
           <button
             className={`tab-btn ${mode === 'photo' ? 'active' : ''}`}
@@ -288,6 +358,92 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
               >
                 + Create New Food
               </button>
+            )}
+          </div>
+        )}
+
+        {mode === 'ai' && (
+          <div style={{ marginBottom: 16 }}>
+            {!settings.claudeApiKey && (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-sm)',
+                  marginBottom: 12,
+                  fontSize: 13,
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <Settings size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                Claude API key required. Set it in <strong>Settings</strong> to use AI analysis.
+              </div>
+            )}
+
+            {!aiProcessing && aiResults.length === 0 && (
+              <div>
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label className="label">Describe what you ate</label>
+                  <textarea
+                    className="input"
+                    rows={3}
+                    value={aiDescription}
+                    onChange={(e) => setAiDescription(e.target.value)}
+                    placeholder="e.g., 200g grilled chicken breast with 150g white rice and a mixed green salad with olive oil"
+                    style={{ resize: 'vertical' }}
+                    autoFocus
+                  />
+                </div>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  onClick={handleAiAnalyze}
+                  disabled={!aiDescription.trim() || !settings.claudeApiKey}
+                >
+                  <Sparkles size={16} /> Analyze
+                </button>
+              </div>
+            )}
+
+            {aiProcessing && (
+              <div style={{ textAlign: 'center', marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--text-muted)' }}>
+                  <Loader size={16} className="spin" /> Analyzing...
+                </div>
+              </div>
+            )}
+
+            {aiError && (
+              <p className="text-sm" style={{ marginTop: 12, color: 'var(--danger)', textAlign: 'center' }}>
+                {aiError}
+              </p>
+            )}
+
+            {aiResults.length > 1 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600 }}>
+                    {aiResults.length} items detected
+                  </p>
+                  <button className="btn btn-primary btn-sm" onClick={addAllAiResults}>
+                    <Check size={14} /> Add All
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {aiResults.map((item, i) => (
+                    <button
+                      key={i}
+                      className="food-search-item"
+                      onClick={() => selectAiResult(item)}
+                    >
+                      <span className="food-search-name">{item.name}</span>
+                      <span className="food-search-macros">
+                        {item.calories} kcal | P:{item.proteinG}g C:{item.carbsG}g F:{item.fatG}g
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -448,7 +604,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
         )}
 
         {/* Manual form (always shown for final entry) */}
-        {(mode === 'manual' || mode === 'photo') && !photoProcessing && photoResults.length <= 1 && (
+        {(mode === 'manual' || mode === 'photo' || mode === 'ai') && !photoProcessing && !aiProcessing && photoResults.length <= 1 && aiResults.length <= 1 && (
           <>
             <div className="form-group">
               <label className="label">Name</label>
@@ -535,7 +691,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
           </>
         )}
 
-        {(!photoProcessing && (mode !== 'photo' || photoResults.length <= 1)) && (
+        {(!photoProcessing && !aiProcessing && (mode !== 'photo' || photoResults.length <= 1) && (mode !== 'ai' || aiResults.length <= 1)) && (
           <div className="modal-actions">
             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
             <button className="btn btn-primary" onClick={save} disabled={!form.name.trim()}>
