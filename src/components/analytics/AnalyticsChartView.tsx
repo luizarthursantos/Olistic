@@ -223,6 +223,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
           {chart.metrics.map((metric) => {
             const metricDef = AVAILABLE_METRICS.find((m) => m.key === metric.key);
             const hasMA = chart.showMovingAverage;
+            const isBody = metricDef?.category === 'body';
             return (
               <Line
                 key={metric.key}
@@ -233,24 +234,28 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
                 strokeWidth={hasMA ? 1 : 2}
                 dot={false}
                 name={metric.label || metricDef?.label || metric.key}
-                connectNulls
+                connectNulls={isBody}
               />
             );
           })}
           {chart.showMovingAverage &&
-            chart.metrics.map((metric) => (
-              <Line
-                key={`${metric.key}_ma`}
-                yAxisId={metric.axis === 'right' ? 'right' : 'left'}
-                type="monotone"
-                dataKey={`${metric.key}_ma`}
-                stroke={metric.color}
-                strokeWidth={2.5}
-                dot={false}
-                name={`${metric.label || metric.key} (MA ${chart.movingAverageDays}d)`}
-                connectNulls
-              />
-            ))}
+            chart.metrics.map((metric) => {
+              const metricDef = AVAILABLE_METRICS.find((m) => m.key === metric.key);
+              const isBody = metricDef?.category === 'body';
+              return (
+                <Line
+                  key={`${metric.key}_ma`}
+                  yAxisId={metric.axis === 'right' ? 'right' : 'left'}
+                  type="monotone"
+                  dataKey={`${metric.key}_ma`}
+                  stroke={metric.color}
+                  strokeWidth={2.5}
+                  dot={false}
+                  name={`${metric.label || metric.key} (MA ${chart.movingAverageDays}d)`}
+                  connectNulls={isBody}
+                />
+              );
+            })}
         </LineChart>
       </ResponsiveContainer>
     </div>
