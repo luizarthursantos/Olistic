@@ -63,8 +63,18 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
       }
     });
 
+    // Fill in ALL calendar dates between min and max so the x-axis is proportional to time
     const sortedDates = [...allDates].sort();
-    return sortedDates.map((date) => {
+    if (sortedDates.length === 0) return [];
+    const allCalendarDates: string[] = [];
+    const d = new Date(sortedDates[0] + 'T12:00:00');
+    const endDate = sortedDates[sortedDates.length - 1];
+    while (d.toISOString().split('T')[0] <= endDate) {
+      allCalendarDates.push(d.toISOString().split('T')[0]);
+      d.setDate(d.getDate() + 1);
+    }
+
+    return allCalendarDates.map((date) => {
       const point: Record<string, string | number> = { date };
       chart.metrics.forEach((metric) => {
         if (metricSeries[metric.key]?.[date] !== undefined) {
@@ -115,30 +125,17 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
   // Compute X-axis ticks: Sundays for short ranges, 1st of month for longer
   const xTicks = useMemo(() => {
     if (chartData.length === 0) return [];
-    const dates = chartData.map((d) => d.date as string);
-    const first = dates[0];
-    const last = dates[dates.length - 1];
+    const first = chartData[0].date as string;
+    const last = chartData[chartData.length - 1].date as string;
     const span = (new Date(last).getTime() - new Date(first).getTime()) / (1000 * 60 * 60 * 24);
-    const dateSet = new Set(dates);
     const ticks: string[] = [];
 
     if (span <= 120) {
-      // Weekly: find Sundays within the data range
+      // Weekly: find Sundays
       const d = new Date(first + 'T12:00:00');
-      // Advance to the next Sunday
       d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
       while (d.toISOString().split('T')[0] <= last) {
-        const ds = d.toISOString().split('T')[0];
-        // Find nearest date in data
-        if (dateSet.has(ds)) {
-          ticks.push(ds);
-        } else {
-          // Find closest date in data
-          const closest = dates.reduce((prev, curr) =>
-            Math.abs(new Date(curr).getTime() - d.getTime()) < Math.abs(new Date(prev).getTime() - d.getTime()) ? curr : prev
-          );
-          if (!ticks.includes(closest)) ticks.push(closest);
-        }
+        ticks.push(d.toISOString().split('T')[0]);
         d.setDate(d.getDate() + 7);
       }
     } else {
@@ -146,15 +143,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
       const startD = new Date(first + 'T12:00:00');
       const d = new Date(startD.getFullYear(), startD.getMonth() + 1, 1, 12);
       while (d.toISOString().split('T')[0] <= last) {
-        const ds = d.toISOString().split('T')[0];
-        if (dateSet.has(ds)) {
-          ticks.push(ds);
-        } else {
-          const closest = dates.reduce((prev, curr) =>
-            Math.abs(new Date(curr).getTime() - d.getTime()) < Math.abs(new Date(prev).getTime() - d.getTime()) ? curr : prev
-          );
-          if (!ticks.includes(closest)) ticks.push(closest);
-        }
+        ticks.push(d.toISOString().split('T')[0]);
         d.setMonth(d.getMonth() + 1);
       }
     }
