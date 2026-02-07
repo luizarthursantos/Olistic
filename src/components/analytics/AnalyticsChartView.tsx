@@ -159,7 +159,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
           <Legend wrapperStyle={{ fontSize: 12 }} />
           {chart.metrics.map((metric) => {
             const metricDef = AVAILABLE_METRICS.find((m) => m.key === metric.key);
-            const rawColor = chart.showMovingAverage ? `${metric.color}80` : metric.color;
+            const rawColor = chart.showMovingAverage ? `${metric.color}cc` : metric.color;
             return (
               <Line
                 key={metric.key}
