@@ -37,6 +37,7 @@ export const AVAILABLE_METRICS: MetricDefinition[] = [
   { key: 'target_body_fat_pct', label: 'Target Body Fat %', category: 'body', unit: '%' },
   { key: 'fat_to_lose_pct', label: 'Fat to Lose %', category: 'body', unit: '%' },
   { key: 'fat_to_lose_kg', label: 'Fat to Lose (kg)', category: 'body', unit: 'kg' },
+  { key: 'weight_to_lose', label: 'Weight to Lose', category: 'body', unit: 'kg' },
   { key: 'lean_to_gain_pct', label: 'Lean Mass to Gain %', category: 'body', unit: '%' },
   { key: 'lean_to_gain_kg', label: 'Lean Mass to Gain (kg)', category: 'body', unit: 'kg' },
   { key: 'bmr', label: 'Basal Metabolic Rate', category: 'body', unit: 'kcal' },
@@ -167,6 +168,15 @@ export function getMetricData(
         const currentFatKg = resolve(e, 'weightKg') * bf / 100;
         const targetFatKg = resolve(e, 'weightKg') * n(settings.targetBodyFatPct) / 100;
         return { date: e.date, value: Math.max(0, Math.round((currentFatKg - targetFatKg) * 10) / 10) };
+      });
+
+    case 'weight_to_lose':
+      return entries.filter((e) => resolve(e, 'weightKg') > 0 && resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => {
+        const w = resolve(e, 'weightKg');
+        const bf = calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm));
+        const leanKg = w * (1 - bf / 100);
+        const targetWeight = leanKg / (1 - n(settings.targetBodyFatPct) / 100);
+        return { date: e.date, value: Math.max(0, Math.round((w - targetWeight) * 10) / 10) };
       });
 
     case 'lean_to_gain_pct':
