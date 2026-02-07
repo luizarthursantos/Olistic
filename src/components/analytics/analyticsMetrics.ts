@@ -76,6 +76,9 @@ function interpolateBodyEntries(entries: BodyEntry[]): BodyEntry[] {
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
   const result: BodyEntry[] = [];
 
+  const n = (v: unknown): number => { const x = Number(v); return isFinite(x) ? x : 0; };
+  const lerp = (a: number, b: number, t: number) => Math.round((a + t * (b - a)) * 100) / 100;
+
   for (let i = 0; i < sorted.length; i++) {
     result.push(sorted[i]);
     if (i < sorted.length - 1) {
@@ -92,9 +95,9 @@ function interpolateBodyEntries(entries: BodyEntry[]): BodyEntry[] {
         result.push({
           id: `interp-${dateStr}`,
           date: dateStr,
-          weightKg: Math.round((curr.weightKg + t * (next.weightKg - curr.weightKg)) * 100) / 100,
-          waistCm: Math.round((curr.waistCm + t * (next.waistCm - curr.waistCm)) * 100) / 100,
-          neckCm: Math.round((curr.neckCm + t * (next.neckCm - curr.neckCm)) * 100) / 100,
+          weightKg: lerp(n(curr.weightKg), n(next.weightKg), t),
+          waistCm: lerp(n(curr.waistCm), n(next.waistCm), t),
+          neckCm: lerp(n(curr.neckCm), n(next.neckCm), t),
           activityLevel: curr.activityLevel,
         });
       }
@@ -110,86 +113,86 @@ export function getMetricData(
 ): { date: string; value: number }[] {
   const { bodyEntries, mealEntries, macroTargets, workoutSessions, settings } = state;
   const age = calcAge(settings.birthday);
+  const n = (v: unknown): number => { const x = Number(v); return isFinite(x) ? x : 0; };
 
-  // Use interpolated body entries for all body metrics
-  const isBodyMetric = AVAILABLE_METRICS.find((m) => m.key === key)?.category === 'body';
-  const entries = isBodyMetric ? interpolateBodyEntries(bodyEntries) : bodyEntries;
+  // Use raw body entries — chart lines connect points directly (linear interpolation)
+  const entries = bodyEntries;
 
   switch (key) {
     case 'weight':
-      return entries.map((e) => ({ date: e.date, value: e.weightKg }));
+      return entries.map((e) => ({ date: e.date, value: n(e.weightKg) }));
 
     case 'body_fat_pct':
       return entries.map((e) => ({
         date: e.date,
-        value: calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm),
+        value: calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm)),
       }));
 
     case 'body_fat_kg':
       return entries.map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
-        return { date: e.date, value: Math.round(e.weightKg * bf / 100 * 10) / 10 };
+        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
+        return { date: e.date, value: Math.round(n(e.weightKg) * bf / 100 * 10) / 10 };
       });
 
     case 'lean_mass_pct':
       return entries.map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
+        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         return { date: e.date, value: Math.round((100 - bf) * 10) / 10 };
       });
 
     case 'lean_mass_kg':
       return entries.map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
-        return { date: e.date, value: Math.round(e.weightKg * (1 - bf / 100) * 10) / 10 };
+        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
+        return { date: e.date, value: Math.round(n(e.weightKg) * (1 - bf / 100) * 10) / 10 };
       });
 
     case 'waist':
-      return entries.map((e) => ({ date: e.date, value: e.waistCm }));
+      return entries.map((e) => ({ date: e.date, value: n(e.waistCm) }));
 
     case 'neck':
-      return entries.map((e) => ({ date: e.date, value: e.neckCm }));
+      return entries.map((e) => ({ date: e.date, value: n(e.neckCm) }));
 
     case 'ffmi':
       return entries.map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
-        return { date: e.date, value: calcFFMI(e.weightKg, bf, settings.heightCm) };
+        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
+        return { date: e.date, value: calcFFMI(n(e.weightKg), bf, n(settings.heightCm)) };
       });
 
     case 'target_ffmi':
-      return entries.map((e) => ({ date: e.date, value: settings.targetFFMI }));
+      return entries.map((e) => ({ date: e.date, value: n(settings.targetFFMI) }));
 
     case 'target_body_fat_pct':
-      return entries.map((e) => ({ date: e.date, value: settings.targetBodyFatPct }));
+      return entries.map((e) => ({ date: e.date, value: n(settings.targetBodyFatPct) }));
 
     case 'fat_to_lose_pct':
       return entries.map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
-        return { date: e.date, value: Math.max(0, Math.round((bf - settings.targetBodyFatPct) * 10) / 10) };
+        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
+        return { date: e.date, value: Math.max(0, Math.round((bf - n(settings.targetBodyFatPct)) * 10) / 10) };
       });
 
     case 'fat_to_lose_kg':
       return entries.map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
-        const currentFatKg = e.weightKg * bf / 100;
-        const targetFatKg = e.weightKg * settings.targetBodyFatPct / 100;
+        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
+        const currentFatKg = n(e.weightKg) * bf / 100;
+        const targetFatKg = n(e.weightKg) * n(settings.targetBodyFatPct) / 100;
         return { date: e.date, value: Math.max(0, Math.round((currentFatKg - targetFatKg) * 10) / 10) };
       });
 
     case 'lean_to_gain_pct': {
       return entries.map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
+        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
         const currentLeanPct = 100 - bf;
-        const targetLeanPct = 100 - settings.targetBodyFatPct;
+        const targetLeanPct = 100 - n(settings.targetBodyFatPct);
         return { date: e.date, value: Math.max(0, Math.round((targetLeanPct - currentLeanPct) * 10) / 10) };
       });
     }
 
     case 'lean_to_gain_kg': {
       return entries.map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
-        const currentFFMI = calcFFMI(e.weightKg, bf, settings.heightCm);
-        const delta = settings.targetFFMI - currentFFMI;
-        const heightM = settings.heightCm / 100;
+        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
+        const currentFFMI = calcFFMI(n(e.weightKg), bf, n(settings.heightCm));
+        const delta = n(settings.targetFFMI) - currentFFMI;
+        const heightM = n(settings.heightCm) / 100;
         return { date: e.date, value: Math.max(0, Math.round(delta * heightM * heightM * 10) / 10) };
       });
     }
@@ -197,127 +200,127 @@ export function getMetricData(
     case 'bmr':
       return entries.map((e) => ({
         date: e.date,
-        value: calcBMR(settings.sex, e.weightKg, settings.heightCm, age),
+        value: calcBMR(settings.sex, n(e.weightKg), n(settings.heightCm), age),
       }));
 
     case 'tdee':
       return entries.map((e) => {
-        const bmr = calcBMR(settings.sex, e.weightKg, settings.heightCm, age);
+        const bmr = calcBMR(settings.sex, n(e.weightKg), n(settings.heightCm), age);
         const workoutCal = workoutSessions
           .filter((s) => s.date === e.date && s.completed)
-          .reduce((sum, s) => sum + s.estimatedCalories, 0);
+          .reduce((sum, s) => sum + n(s.estimatedCalories), 0);
         return { date: e.date, value: calcTDEE(bmr, e.activityLevel) + workoutCal };
       });
 
     case 'caloric_balance': {
       return entries.map((e) => {
-        const bmr = calcBMR(settings.sex, e.weightKg, settings.heightCm, age);
+        const bmr = calcBMR(settings.sex, n(e.weightKg), n(settings.heightCm), age);
         const tdee = calcTDEE(bmr, e.activityLevel);
         const workoutCal = workoutSessions
           .filter((s) => s.date === e.date && s.completed)
-          .reduce((sum, s) => sum + s.estimatedCalories, 0);
+          .reduce((sum, s) => sum + n(s.estimatedCalories), 0);
         const totalExpenditure = tdee + workoutCal;
         const consumed = mealEntries
           .filter((m) => m.date === e.date)
-          .reduce((sum, m) => sum + m.calories, 0);
+          .reduce((sum, m) => sum + n(m.calories), 0);
         return { date: e.date, value: consumed - totalExpenditure };
       });
     }
 
     case 'food_calories': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.calories; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.calories); });
       return Object.entries(byDate).map(([date, value]) => ({ date, value }));
     }
 
     case 'food_protein': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.proteinG; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.proteinG); });
       return Object.entries(byDate).map(([date, value]) => ({ date, value: Math.round(value * 10) / 10 }));
     }
 
     case 'food_carbs': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.carbsG; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.carbsG); });
       return Object.entries(byDate).map(([date, value]) => ({ date, value: Math.round(value * 10) / 10 }));
     }
 
     case 'food_fat': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.fatG; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.fatG); });
       return Object.entries(byDate).map(([date, value]) => ({ date, value: Math.round(value * 10) / 10 }));
     }
 
     case 'food_sugar': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.sugarG; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.sugarG); });
       return Object.entries(byDate).map(([date, value]) => ({ date, value: Math.round(value * 10) / 10 }));
     }
 
     case 'food_fiber': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.fiberG; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.fiberG); });
       return Object.entries(byDate).map(([date, value]) => ({ date, value: Math.round(value * 10) / 10 }));
     }
 
     case 'food_target_calories': {
       const sorted = [...macroTargets].sort((a, b) => a.date.localeCompare(b.date));
-      return sorted.map((t) => ({ date: t.date, value: t.calories }));
+      return sorted.map((t) => ({ date: t.date, value: n(t.calories) }));
     }
 
     case 'food_target_protein':
-      return [...macroTargets].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({ date: t.date, value: t.proteinG }));
+      return [...macroTargets].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({ date: t.date, value: n(t.proteinG) }));
 
     case 'food_target_carbs':
-      return [...macroTargets].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({ date: t.date, value: t.carbsG }));
+      return [...macroTargets].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({ date: t.date, value: n(t.carbsG) }));
 
     case 'food_target_fat':
-      return [...macroTargets].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({ date: t.date, value: t.fatG }));
+      return [...macroTargets].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({ date: t.date, value: n(t.fatG) }));
 
     case 'food_delta_calories': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.calories; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.calories); });
       const sortedTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
       return Object.entries(byDate).map(([date, consumed]) => {
         const target = sortedTargets.find((t) => t.date <= date);
-        return { date, value: consumed - (target?.calories || 0) };
+        return { date, value: consumed - n(target?.calories) };
       });
     }
 
     case 'food_delta_protein': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.proteinG; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.proteinG); });
       const sortedTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
       return Object.entries(byDate).map(([date, consumed]) => {
         const target = sortedTargets.find((t) => t.date <= date);
-        return { date, value: Math.round((consumed - (target?.proteinG || 0)) * 10) / 10 };
+        return { date, value: Math.round((consumed - n(target?.proteinG)) * 10) / 10 };
       });
     }
 
     case 'food_delta_carbs': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.carbsG; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.carbsG); });
       const sortedTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
       return Object.entries(byDate).map(([date, consumed]) => {
         const target = sortedTargets.find((t) => t.date <= date);
-        return { date, value: Math.round((consumed - (target?.carbsG || 0)) * 10) / 10 };
+        return { date, value: Math.round((consumed - n(target?.carbsG)) * 10) / 10 };
       });
     }
 
     case 'food_delta_fat': {
       const byDate: Record<string, number> = {};
-      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + m.fatG; });
+      mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.fatG); });
       const sortedTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
       return Object.entries(byDate).map(([date, consumed]) => {
         const target = sortedTargets.find((t) => t.date <= date);
-        return { date, value: Math.round((consumed - (target?.fatG || 0)) * 10) / 10 };
+        return { date, value: Math.round((consumed - n(target?.fatG)) * 10) / 10 };
       });
     }
 
     case 'workout_calories': {
       const byDate: Record<string, number> = {};
       workoutSessions.filter((s) => s.completed).forEach((s) => {
-        byDate[s.date] = (byDate[s.date] || 0) + s.estimatedCalories;
+        byDate[s.date] = (byDate[s.date] || 0) + n(s.estimatedCalories);
       });
       return Object.entries(byDate).map(([date, value]) => ({ date, value }));
     }
