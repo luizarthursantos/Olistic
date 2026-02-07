@@ -223,22 +223,16 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-.meal-section-row-inner {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
 .meal-section-name {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.meal-section-subtotal {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 400;
+.meal-subtotal-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .btn-add-meal {

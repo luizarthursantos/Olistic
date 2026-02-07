@@ -262,18 +262,16 @@ export function FoodTab() {
                 const sub = mealSubtotals[type];
                 return [
                   <tr key={`section-${type}`} className="meal-section-row">
-                    <td>
-                      <div className="meal-section-row-inner">
-                        <span className="meal-section-name">{MEAL_TYPE_LABELS[type]}</span>
-                        {sub.calories > 0 && (
-                          <span className="meal-section-subtotal">
-                            {sub.calories} kcal · {sub.proteinG.toFixed(0)}P · {sub.carbsG.toFixed(0)}C · {sub.fatG.toFixed(0)}F
-                          </span>
-                        )}
-                      </div>
+                    <td className="col-name">
+                      <span className="meal-section-name">{MEAL_TYPE_LABELS[type]}</span>
                     </td>
-                    <td colSpan={6}></td>
-                    <td>
+                    <td className="col-num meal-subtotal-val">{sub.calories > 0 ? sub.calories : ''}</td>
+                    <td className="col-num meal-subtotal-val">{sub.proteinG > 0 ? `${sub.proteinG.toFixed(0)}g` : ''}</td>
+                    <td className="col-num meal-subtotal-val">{sub.carbsG > 0 ? `${sub.carbsG.toFixed(0)}g` : ''}</td>
+                    <td className="col-num meal-subtotal-val">{sub.fatG > 0 ? `${sub.fatG.toFixed(0)}g` : ''}</td>
+                    <td className="col-num meal-subtotal-val">{sub.sugarG > 0 ? `${sub.sugarG.toFixed(0)}g` : ''}</td>
+                    <td className="col-num meal-subtotal-val">{sub.fiberG > 0 ? `${sub.fiberG.toFixed(0)}g` : ''}</td>
+                    <td className="col-action">
                       <button className="btn btn-primary btn-sm btn-add-meal" onClick={() => openAddMeal(type)}>
                         <Plus size={13} />
                       </button>
