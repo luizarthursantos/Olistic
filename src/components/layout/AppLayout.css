@@ -35,6 +35,12 @@
   padding: 20px;
 }
 
+@media (max-width: 500px) {
+  .app-main {
+    padding: 16px 12px;
+  }
+}
+
 .app-nav {
   display: flex;
   background: var(--bg-secondary);

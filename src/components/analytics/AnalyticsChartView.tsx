@@ -123,11 +123,11 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
   return (
     <div>
       <ResponsiveContainer width="100%" height={280}>
-        <LineChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 60 : 20, bottom: 5, left: 20 }}>
+        <LineChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 5 : 5, bottom: 5, left: 0 }}>
           <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" />
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+            tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
             tickFormatter={(val: string) => {
               const d = new Date(val + 'T12:00:00');
               const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -136,17 +136,19 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
           />
           <YAxis
             yAxisId="left"
-            tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
-            width={50}
+            tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+            width={40}
             domain={axisDomain.left || ['auto', 'auto']}
+            tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Number.isInteger(v) ? String(v) : v.toFixed(1)}
           />
           {hasRightAxis && (
             <YAxis
               yAxisId="right"
               orientation="right"
-              tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
-              width={50}
+              tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+              width={40}
               domain={axisDomain.right || ['auto', 'auto']}
+              tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Number.isInteger(v) ? String(v) : v.toFixed(1)}
             />
           )}
           <Tooltip
