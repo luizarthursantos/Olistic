@@ -82,6 +82,26 @@ export function BodyTab() {
     setDeleteConfirm(null);
   };
 
+  // Interpolate a numeric field for a given date from surrounding entries that have it
+  const interpolateField = (date: string, field: 'weightKg' | 'waistCm' | 'neckCm'): number => {
+    const sorted = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
+    const before = sorted.filter((e) => e.date <= date && e[field]).pop();
+    const after = sorted.find((e) => e.date >= date && e[field]);
+    if (before && after && before.date !== after.date) {
+      const d1 = new Date(before.date + 'T12:00:00').getTime();
+      const d2 = new Date(after.date + 'T12:00:00').getTime();
+      const dt = new Date(date + 'T12:00:00').getTime();
+      const t = (dt - d1) / (d2 - d1);
+      return Math.round((before[field] + t * (after[field] - before[field])) * 10) / 10;
+    }
+    return before?.[field] || after?.[field] || 0;
+  };
+
+  // Get best value for a field: use entry's own value if present, otherwise interpolate
+  const resolveField = (entry: BodyEntry, field: 'weightKg' | 'waistCm' | 'neckCm'): number => {
+    return entry[field] || interpolateField(entry.date, field);
+  };
+
   // Interpolate a body entry for the selected date if no exact entry exists
   const interpolatedEntry = useMemo(() => {
     const exact = bodyEntries.find((e) => e.date === selectedDate);
@@ -91,24 +111,16 @@ export function BodyTab() {
     const sorted = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
     const before = sorted.filter((e) => e.date < selectedDate).pop();
     const after = sorted.find((e) => e.date > selectedDate);
+    const activityLevel = before?.activityLevel || after?.activityLevel || settings.activityLevel;
 
-    if (before && after) {
-      const d1 = new Date(before.date + 'T12:00:00').getTime();
-      const d2 = new Date(after.date + 'T12:00:00').getTime();
-      const dt = new Date(selectedDate + 'T12:00:00').getTime();
-      const t = (dt - d1) / (d2 - d1);
-      return {
-        id: 'interpolated',
-        date: selectedDate,
-        weightKg: Math.round((before.weightKg + t * (after.weightKg - before.weightKg)) * 100) / 100,
-        waistCm: Math.round((before.waistCm + t * (after.waistCm - before.waistCm)) * 100) / 100,
-        neckCm: Math.round((before.neckCm + t * (after.neckCm - before.neckCm)) * 100) / 100,
-        activityLevel: before.activityLevel,
-      } as BodyEntry;
-    }
-
-    // Only data on one side — use the nearest entry
-    return before || after || null;
+    return {
+      id: 'interpolated',
+      date: selectedDate,
+      weightKg: interpolateField(selectedDate, 'weightKg'),
+      waistCm: interpolateField(selectedDate, 'waistCm'),
+      neckCm: interpolateField(selectedDate, 'neckCm'),
+      activityLevel,
+    } as BodyEntry;
   }, [bodyEntries, selectedDate]);
 
   const isInterpolated = interpolatedEntry ? !bodyEntries.some((e) => e.date === selectedDate) : false;
@@ -117,38 +129,25 @@ export function BodyTab() {
   const stats = useMemo(() => {
     if (!interpolatedEntry) return null;
 
-    const waist = interpolatedEntry.waistCm || interpolateField(interpolatedEntry, 'waistCm');
-    const neck = interpolatedEntry.neckCm || interpolateField(interpolatedEntry, 'neckCm');
-    const bodyFat = calcBodyFatNavy(settings.sex, waist, neck, settings.heightCm);
-    const ffmi = calcFFMI(interpolatedEntry.weightKg, bodyFat, settings.heightCm);
-    const age = calcAge(settings.birthday);
-    const bmr = calcBMR(settings.sex, interpolatedEntry.weightKg, settings.heightCm, age);
-    const tdee = calcTDEE(bmr, interpolatedEntry.activityLevel);
-    const leanMassKg = interpolatedEntry.weightKg * (1 - bodyFat / 100);
-    const fatMassKg = interpolatedEntry.weightKg * (bodyFat / 100);
+    const weight = resolveField(interpolatedEntry, 'weightKg');
+    const waist = resolveField(interpolatedEntry, 'waistCm');
+    const neck = resolveField(interpolatedEntry, 'neckCm');
+    if (!weight) return null;
 
-    return { bodyFat, ffmi, bmr, tdee, leanMassKg, fatMassKg };
+    const bodyFat = calcBodyFatNavy(settings.sex, waist, neck, settings.heightCm);
+    const ffmi = calcFFMI(weight, bodyFat, settings.heightCm);
+    const age = calcAge(settings.birthday);
+    const bmr = calcBMR(settings.sex, weight, settings.heightCm, age);
+    const tdee = calcTDEE(bmr, interpolatedEntry.activityLevel);
+    const leanMassKg = weight * (1 - bodyFat / 100);
+    const fatMassKg = weight * (bodyFat / 100);
+
+    return { weight, bodyFat, ffmi, bmr, tdee, leanMassKg, fatMassKg };
   }, [interpolatedEntry, bodyEntries, settings]);
 
   const recentEntries = useMemo(() => {
     return [...bodyEntries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
   }, [bodyEntries]);
-
-  // Interpolate waist/neck for entries missing them
-  const interpolateField = (entry: BodyEntry, field: 'waistCm' | 'neckCm'): number => {
-    if (entry[field]) return entry[field];
-    const sorted = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
-    const before = sorted.filter((e) => e.date < entry.date && e[field]).pop();
-    const after = sorted.find((e) => e.date > entry.date && e[field]);
-    if (before && after) {
-      const d1 = new Date(before.date + 'T12:00:00').getTime();
-      const d2 = new Date(after.date + 'T12:00:00').getTime();
-      const dt = new Date(entry.date + 'T12:00:00').getTime();
-      const t = (dt - d1) / (d2 - d1);
-      return Math.round((before[field] + t * (after[field] - before[field])) * 10) / 10;
-    }
-    return before?.[field] || after?.[field] || 0;
-  };
 
   return (
     <div className="body-tab fade-in">
@@ -163,7 +162,7 @@ export function BodyTab() {
           )}
           <div className="body-stats-grid">
           <div className="stat-card">
-            <div className="stat-card-value">{interpolatedEntry?.weightKg} kg</div>
+            <div className="stat-card-value">{stats.weight} kg</div>
             <div className="stat-card-label">Weight</div>
           </div>
           <div className="stat-card">
@@ -235,17 +234,18 @@ export function BodyTab() {
               </thead>
               <tbody>
                 {recentEntries.map((entry) => {
-                  const waist = entry.waistCm || interpolateField(entry, 'waistCm');
-                  const neck = entry.neckCm || interpolateField(entry, 'neckCm');
+                  const weight = resolveField(entry, 'weightKg');
+                  const waist = resolveField(entry, 'waistCm');
+                  const neck = resolveField(entry, 'neckCm');
                   const bf = calcBodyFatNavy(settings.sex, waist, neck, settings.heightCm);
-                  const isEstimated = !entry.waistCm || !entry.neckCm;
+                  const estimatedStyle = { color: 'var(--text-muted)', fontStyle: 'italic' as const };
                   return (
                     <tr key={entry.id}>
                       <td>{entry.date.slice(8,10)}-{entry.date.slice(5,7)}-{entry.date.slice(2,4)}</td>
-                      <td>{entry.weightKg}</td>
-                      <td style={!entry.waistCm ? { color: 'var(--text-muted)', fontStyle: 'italic' } : undefined}>{waist || '–'}</td>
-                      <td style={!entry.neckCm ? { color: 'var(--text-muted)', fontStyle: 'italic' } : undefined}>{neck || '–'}</td>
-                      <td style={isEstimated ? { color: 'var(--text-muted)', fontStyle: 'italic' } : undefined}>{bf || '–'}</td>
+                      <td style={!entry.weightKg ? estimatedStyle : undefined}>{weight || '–'}</td>
+                      <td style={!entry.waistCm ? estimatedStyle : undefined}>{waist || '–'}</td>
+                      <td style={!entry.neckCm ? estimatedStyle : undefined}>{neck || '–'}</td>
+                      <td style={!entry.waistCm || !entry.neckCm ? estimatedStyle : undefined}>{bf || '–'}</td>
                       {editMode && (
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
