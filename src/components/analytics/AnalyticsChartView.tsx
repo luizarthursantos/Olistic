@@ -88,8 +88,8 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
     });
   }, [chart, state.bodyEntries, state.mealEntries, state.macroTargets, state.workoutSessions, state.settings]);
 
-  // Compute domain for left/right axes: fit to data range with 5% margin
-  const axisDomain = useMemo(() => {
+  // Compute domain and nice ticks (multiples of 5 or 10) for left/right axes
+  const axisConfig = useMemo(() => {
     const leftKeys = chart.metrics
       .filter((m) => m.axis !== 'right')
       .flatMap((m) => [m.key, chart.showMovingAverage ? `${m.key}_ma` : null].filter(Boolean) as string[]);
@@ -97,7 +97,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
       .filter((m) => m.axis === 'right')
       .flatMap((m) => [m.key, chart.showMovingAverage ? `${m.key}_ma` : null].filter(Boolean) as string[]);
 
-    const getRange = (keys: string[]): [number, number] | undefined => {
+    const niceTicks = (keys: string[]): { domain: [number, number]; ticks: number[] } | undefined => {
       const values: number[] = [];
       chartData.forEach((point) => {
         keys.forEach((k) => {
@@ -106,19 +106,29 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
         });
       });
       if (values.length === 0) return undefined;
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const range = max - min || Math.abs(max) * 0.1 || 1;
-      const margin = range * 0.05;
-      return [
-        Math.floor((min - margin) * 100) / 100,
-        Math.ceil((max + margin) * 100) / 100,
-      ];
+      const dataMin = Math.min(...values);
+      const dataMax = Math.max(...values);
+      const range = dataMax - dataMin || Math.abs(dataMax) * 0.1 || 1;
+
+      // Pick a step that is a multiple of 5 or 10
+      const targetTicks = 5;
+      const rawStep = range / targetTicks;
+      const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const candidates = [1, 2, 5, 10].map((m) => m * magnitude);
+      const step = candidates.find((c) => c >= rawStep) || candidates[candidates.length - 1];
+
+      const lo = Math.floor(dataMin / step) * step;
+      const hi = Math.ceil(dataMax / step) * step;
+      const ticks: number[] = [];
+      for (let v = lo; v <= hi + step * 0.01; v += step) {
+        ticks.push(Math.round(v * 1e6) / 1e6);
+      }
+      return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
     };
 
     return {
-      left: getRange(leftKeys),
-      right: getRange(rightKeys),
+      left: niceTicks(leftKeys),
+      right: niceTicks(rightKeys),
     };
   }, [chartData, chart.metrics, chart.showMovingAverage]);
 
@@ -188,8 +198,9 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
             yAxisId="left"
             tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
             width={40}
-            domain={axisDomain.left || ['auto', 'auto']}
-            tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Number.isInteger(v) ? String(v) : v.toFixed(1)}
+            domain={axisConfig.left?.domain || ['auto', 'auto']}
+            ticks={axisConfig.left?.ticks}
+            tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v))}
           />
           {hasRightAxis && (
             <YAxis
@@ -197,8 +208,9 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
               orientation="right"
               tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
               width={40}
-              domain={axisDomain.right || ['auto', 'auto']}
-              tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Number.isInteger(v) ? String(v) : v.toFixed(1)}
+              domain={axisConfig.right?.domain || ['auto', 'auto']}
+              ticks={axisConfig.right?.ticks}
+              tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v))}
             />
           )}
           <Tooltip
