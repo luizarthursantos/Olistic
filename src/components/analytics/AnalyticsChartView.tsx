@@ -159,14 +159,15 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
           <Legend wrapperStyle={{ fontSize: 12 }} />
           {chart.metrics.map((metric) => {
             const metricDef = AVAILABLE_METRICS.find((m) => m.key === metric.key);
+            const rawColor = chart.showMovingAverage ? `${metric.color}80` : metric.color;
             return (
               <Line
                 key={metric.key}
                 yAxisId={metric.axis === 'right' ? 'right' : 'left'}
                 type="monotone"
                 dataKey={metric.key}
-                stroke={metric.color}
-                strokeWidth={2}
+                stroke={rawColor}
+                strokeWidth={chart.showMovingAverage ? 1.5 : 2}
                 dot={false}
                 name={metric.label || metricDef?.label || metric.key}
                 connectNulls
@@ -181,8 +182,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
                 type="monotone"
                 dataKey={`${metric.key}_ma`}
                 stroke={metric.color}
-                strokeWidth={2}
-                strokeDasharray="5 5"
+                strokeWidth={2.5}
                 dot={false}
                 name={`${metric.label || metric.key} (MA ${chart.movingAverageDays}d)`}
                 connectNulls
