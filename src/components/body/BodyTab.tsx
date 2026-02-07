@@ -165,10 +165,10 @@ export function BodyTab() {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Weight</th>
-                  <th>Waist</th>
-                  <th>Neck</th>
-                  <th>BF%</th>
+                  <th>Weight (kg)</th>
+                  <th>Waist (cm)</th>
+                  <th>Neck (cm)</th>
+                  <th>BF (%)</th>
                   {editMode && <th></th>}
                 </tr>
               </thead>
@@ -178,10 +178,10 @@ export function BodyTab() {
                   return (
                     <tr key={entry.id}>
                       <td>{entry.date}</td>
-                      <td>{entry.weightKg} kg</td>
-                      <td>{entry.waistCm} cm</td>
-                      <td>{entry.neckCm} cm</td>
-                      <td>{bf}%</td>
+                      <td>{entry.weightKg}</td>
+                      <td>{entry.waistCm}</td>
+                      <td>{entry.neckCm}</td>
+                      <td>{bf}</td>
                       {editMode && (
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
