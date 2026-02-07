@@ -33,6 +33,8 @@ export const AVAILABLE_METRICS: MetricDefinition[] = [
   { key: 'waist', label: 'Waist Circumference', category: 'body', unit: 'cm' },
   { key: 'neck', label: 'Neck Circumference', category: 'body', unit: 'cm' },
   { key: 'ffmi', label: 'FFMI', category: 'body', unit: '' },
+  { key: 'target_ffmi', label: 'Target FFMI', category: 'body', unit: '' },
+  { key: 'target_body_fat_pct', label: 'Target Body Fat %', category: 'body', unit: '%' },
   { key: 'fat_to_lose_pct', label: 'Fat to Lose %', category: 'body', unit: '%' },
   { key: 'fat_to_lose_kg', label: 'Fat to Lose (kg)', category: 'body', unit: 'kg' },
   { key: 'lean_to_gain_pct', label: 'Lean Mass to Gain %', category: 'body', unit: '%' },
@@ -152,6 +154,12 @@ export function getMetricData(
         const bf = calcBodyFatNavy(settings.sex, e.waistCm, e.neckCm, settings.heightCm);
         return { date: e.date, value: calcFFMI(e.weightKg, bf, settings.heightCm) };
       });
+
+    case 'target_ffmi':
+      return entries.map((e) => ({ date: e.date, value: settings.targetFFMI }));
+
+    case 'target_body_fat_pct':
+      return entries.map((e) => ({ date: e.date, value: settings.targetBodyFatPct }));
 
     case 'fat_to_lose_pct':
       return entries.map((e) => {
