@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { ActivityLevel, ACTIVITY_LABELS, UnitSystem } from '../../types';
-import { exportAllData, importData } from '../../utils/storage';
+import { exportToXlsx, importFromXlsx } from '../../utils/xlsxIO';
 import { X, Download, Upload, Sun, Moon, Database, Key } from 'lucide-react';
 import './SettingsPanel.css';
 
@@ -13,28 +13,28 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { settings, updateSettings, loadSampleData } = useStore();
   const [importStatus, setImportStatus] = useState<string>('');
 
-  const handleExport = () => {
-    const data = exportAllData();
-    const blob = new Blob([data], { type: 'application/json' });
+  const handleExportXlsx = () => {
+    const data = exportToXlsx();
+    const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `olistic-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `olistic-export-${new Date().toISOString().split('T')[0]}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const handleImport = () => {
+  const handleImportXlsx = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
+    input.accept = '.xlsx';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       try {
-        const text = await file.text();
-        if (importData(text)) {
-          setImportStatus('Data imported successfully! Refresh to see changes.');
+        const buffer = await file.arrayBuffer();
+        if (importFromXlsx(buffer)) {
+          setImportStatus('Data imported successfully! Refreshing...');
           setTimeout(() => window.location.reload(), 1500);
         } else {
           setImportStatus('Failed to import data. Invalid format.');
@@ -195,11 +195,11 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         <div className="settings-section">
           <h3 className="settings-section-title">Data</h3>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button className="btn btn-secondary" onClick={handleExport}>
-              <Download size={16} /> Export JSON
+            <button className="btn btn-secondary" onClick={handleExportXlsx}>
+              <Download size={16} /> Export XLSX
             </button>
-            <button className="btn btn-secondary" onClick={handleImport}>
-              <Upload size={16} /> Import JSON
+            <button className="btn btn-secondary" onClick={handleImportXlsx}>
+              <Upload size={16} /> Import XLSX
             </button>
             <button
               className="btn btn-primary"
