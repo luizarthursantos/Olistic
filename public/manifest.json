@@ -1,4 +1,5 @@
 {
+  "id": "/Olistic/",
   "name": "Olistic - Holistic Health Tracker",
   "short_name": "Olistic",
   "description": "Track body metrics, nutrition, workouts and analytics",
@@ -8,6 +9,7 @@
   "background_color": "#0f1117",
   "theme_color": "#6c63ff",
   "orientation": "portrait",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.png",
@@ -20,6 +22,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
