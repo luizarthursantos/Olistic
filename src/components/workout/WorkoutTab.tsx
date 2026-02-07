@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
-import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye, Pencil } from 'lucide-react';
+import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye, Pencil, TrendingUp } from 'lucide-react';
 import { WorkoutTemplate, WorkoutSession } from '../../types';
 import { WorkoutTemplateModal } from './WorkoutTemplateModal';
 import { WorkoutExecution } from './WorkoutExecution';
 import { WorkoutCalendar } from './WorkoutCalendar';
+import { WorkoutExerciseAnalytics } from './WorkoutExerciseAnalytics';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import './WorkoutTab.css';
 
-type WorkoutView = 'history' | 'calendar';
+type WorkoutView = 'history' | 'calendar' | 'analytics';
 
 export function WorkoutTab() {
   const {
@@ -97,6 +98,12 @@ export function WorkoutTab() {
           onClick={() => setView('calendar')}
         >
           <Calendar size={14} /> Calendar
+        </button>
+        <button
+          className={`tab-btn ${view === 'analytics' ? 'active' : ''}`}
+          onClick={() => setView('analytics')}
+        >
+          <TrendingUp size={14} /> Analytics
         </button>
       </div>
 
@@ -262,6 +269,10 @@ export function WorkoutTab() {
 
       {view === 'calendar' && (
         <WorkoutCalendar onViewSession={(sessionId) => setActiveSession(sessionId)} />
+      )}
+
+      {view === 'analytics' && (
+        <WorkoutExerciseAnalytics />
       )}
 
       {showTemplateModal && (
