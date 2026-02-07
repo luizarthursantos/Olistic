@@ -10,6 +10,7 @@ import {
   WorkoutTemplate,
   WorkoutSession,
   AnalyticsChart,
+  DateRangeOption,
   ThemeMode,
   UnitSystem,
   ActivityLevel,
@@ -67,6 +68,8 @@ export interface AppState {
 
   // Analytics
   analyticsCharts: AnalyticsChart[];
+  analyticsDateRange: DateRangeOption;
+  setAnalyticsDateRange: (range: DateRangeOption) => void;
   addAnalyticsChart: (chart: Omit<AnalyticsChart, 'id'>) => void;
   updateAnalyticsChart: (id: string, chart: Partial<AnalyticsChart>) => void;
   deleteAnalyticsChart: (id: string) => void;
@@ -243,6 +246,11 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Analytics
   analyticsCharts: loadFromStorage<AnalyticsChart[]>('analyticsCharts', []),
+  analyticsDateRange: loadFromStorage<DateRangeOption>('analyticsDateRange', '6M'),
+  setAnalyticsDateRange: (range) => {
+    set({ analyticsDateRange: range });
+    saveToStorage('analyticsDateRange', range);
+  },
   addAnalyticsChart: (chart) => {
     const newChart = { ...chart, id: uuid() };
     const charts = [...get().analyticsCharts, newChart];

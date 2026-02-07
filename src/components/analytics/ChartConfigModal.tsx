@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { AnalyticsChart, AnalyticsMetric, DateRangeOption } from '../../types';
+import { AnalyticsChart, AnalyticsMetric } from '../../types';
 import { AVAILABLE_METRICS, MetricDefinition } from './analyticsMetrics';
 import { X, Plus, Trash2, BarChart2, TrendingUp } from 'lucide-react';
 
@@ -10,14 +10,12 @@ interface ChartConfigModalProps {
 }
 
 const METRIC_COLORS = ['#6c63ff', '#34d399', '#f87171', '#fbbf24', '#60a5fa', '#a78bfa'];
-const DATE_RANGES: DateRangeOption[] = ['1M', '3M', '6M', '12M', 'ALL'];
 
 export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
   const { addAnalyticsChart, updateAnalyticsChart, exercises } = useStore();
 
   const [title, setTitle] = useState(chart?.title || 'New Chart');
   const [metrics, setMetrics] = useState<AnalyticsMetric[]>(chart?.metrics || []);
-  const [dateRange, setDateRange] = useState<DateRangeOption>(chart?.dateRange || '3M');
   const [showMovingAverage, setShowMovingAverage] = useState(chart?.showMovingAverage || false);
   const [movingAverageDays, setMovingAverageDays] = useState(chart?.movingAverageDays || 7);
   const [showMetricPicker, setShowMetricPicker] = useState(false);
@@ -44,7 +42,7 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
 
   const save = () => {
     if (!title.trim() || metrics.length === 0) return;
-    const data = { title, metrics, dateRange, showMovingAverage, movingAverageDays };
+    const data = { title, metrics, dateRange: chart?.dateRange || '6M' as const, showMovingAverage, movingAverageDays };
     if (chart) {
       updateAnalyticsChart(chart.id, data);
     } else {
@@ -147,22 +145,6 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
                 Add at least one metric
               </p>
             )}
-          </div>
-        </div>
-
-        {/* Date Range */}
-        <div className="form-group">
-          <label className="label">Date Range</label>
-          <div className="date-range-btns">
-            {DATE_RANGES.map((r) => (
-              <button
-                key={r}
-                className={`date-range-btn ${dateRange === r ? 'active' : ''}`}
-                onClick={() => setDateRange(r)}
-              >
-                {r}
-              </button>
-            ))}
           </div>
         </div>
 

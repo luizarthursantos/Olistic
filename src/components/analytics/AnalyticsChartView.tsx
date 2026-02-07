@@ -18,21 +18,22 @@ import {
 
 interface AnalyticsChartViewProps {
   chart: AnalyticsChart;
+  dateRange: DateRangeOption;
 }
 
 function getDateCutoff(range: DateRangeOption): string {
   if (range === 'ALL') return '1900-01-01';
   const now = new Date();
-  const months: Record<string, number> = { '1M': 1, '3M': 3, '6M': 6, '12M': 12 };
+  const months: Record<string, number> = { '1M': 1, '3M': 3, '6M': 6, '12M': 12, '24M': 24, '36M': 36 };
   now.setMonth(now.getMonth() - (months[range] || 1));
   return now.toISOString().split('T')[0];
 }
 
-export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
+export function AnalyticsChartView({ chart, dateRange }: AnalyticsChartViewProps) {
   const state = useStore();
 
   const chartData = useMemo(() => {
-    const cutoff = getDateCutoff(chart.dateRange);
+    const cutoff = getDateCutoff(dateRange);
     const allDates = new Set<string>();
     const metricSeries: Record<string, Record<string, number>> = {};
     const maSeries: Record<string, Record<string, number>> = {};
@@ -86,7 +87,7 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
       });
       return point;
     });
-  }, [chart, state.bodyEntries, state.mealEntries, state.macroTargets, state.workoutSessions, state.settings]);
+  }, [chart, dateRange, state.bodyEntries, state.mealEntries, state.macroTargets, state.workoutSessions, state.settings]);
 
   // Compute domain and nice ticks (multiples of 5 or 10) for left/right axes
   const axisConfig = useMemo(() => {

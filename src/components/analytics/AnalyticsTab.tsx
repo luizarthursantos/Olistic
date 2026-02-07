@@ -7,8 +7,10 @@ import { ChartConfigModal } from './ChartConfigModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import './AnalyticsTab.css';
 
+const DATE_RANGES: DateRangeOption[] = ['1M', '3M', '6M', '12M', '24M', '36M', 'ALL'];
+
 export function AnalyticsTab() {
-  const { analyticsCharts, addAnalyticsChart, deleteAnalyticsChart } = useStore();
+  const { analyticsCharts, addAnalyticsChart, deleteAnalyticsChart, analyticsDateRange, setAnalyticsDateRange } = useStore();
   const [configChart, setConfigChart] = useState<AnalyticsChart | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -31,7 +33,7 @@ export function AnalyticsTab() {
 
   return (
     <div className="analytics-tab fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <h2 style={{ fontSize: 18, fontWeight: 600 }}>Analytics Dashboard</h2>
         <div style={{ display: 'flex', gap: 6 }}>
           {analyticsCharts.length > 0 && (
@@ -47,6 +49,20 @@ export function AnalyticsTab() {
           </button>
         </div>
       </div>
+
+      {analyticsCharts.length > 0 && (
+        <div className="date-range-btns" style={{ marginBottom: 16 }}>
+          {DATE_RANGES.map((r) => (
+            <button
+              key={r}
+              className={`date-range-btn ${analyticsDateRange === r ? 'active' : ''}`}
+              onClick={() => setAnalyticsDateRange(r)}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      )}
 
       {analyticsCharts.length === 0 ? (
         <div className="empty-state">
@@ -82,7 +98,7 @@ export function AnalyticsTab() {
                   </div>
                 )}
               </div>
-              <AnalyticsChartView chart={chart} />
+              <AnalyticsChartView chart={chart} dateRange={analyticsDateRange} />
             </div>
           ))}
         </div>
