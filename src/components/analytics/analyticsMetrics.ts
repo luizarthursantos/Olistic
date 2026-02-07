@@ -71,41 +71,6 @@ interface MetricDataState {
   exercises: Exercise[];
 }
 
-function interpolateBodyEntries(entries: BodyEntry[]): BodyEntry[] {
-  if (entries.length < 2) return entries;
-  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-  const result: BodyEntry[] = [];
-
-  const n = (v: unknown): number => { const x = Number(v); return isFinite(x) ? x : 0; };
-  const lerp = (a: number, b: number, t: number) => Math.round((a + t * (b - a)) * 100) / 100;
-
-  for (let i = 0; i < sorted.length; i++) {
-    result.push(sorted[i]);
-    if (i < sorted.length - 1) {
-      const curr = sorted[i];
-      const next = sorted[i + 1];
-      const d1 = new Date(curr.date + 'T12:00:00');
-      const d2 = new Date(next.date + 'T12:00:00');
-      const daysBetween = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-
-      for (let day = 1; day < daysBetween; day++) {
-        const t = day / daysBetween;
-        const interpDate = new Date(d1.getTime() + day * 24 * 60 * 60 * 1000);
-        const dateStr = interpDate.toISOString().split('T')[0];
-        result.push({
-          id: `interp-${dateStr}`,
-          date: dateStr,
-          weightKg: lerp(n(curr.weightKg), n(next.weightKg), t),
-          waistCm: lerp(n(curr.waistCm), n(next.waistCm), t),
-          neckCm: lerp(n(curr.neckCm), n(next.neckCm), t),
-          activityLevel: curr.activityLevel,
-        });
-      }
-    }
-  }
-  return result;
-}
-
 export function getMetricData(
   key: string,
   state: MetricDataState,
@@ -115,40 +80,37 @@ export function getMetricData(
   const age = calcAge(settings.birthday);
   const n = (v: unknown): number => { const x = Number(v); return isFinite(x) ? x : 0; };
 
-  // Use raw body entries — chart lines connect points directly (linear interpolation)
   const entries = bodyEntries;
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
 
-  // Helper: only include entries that have the required field(s)
+  // Helper: only include entries that have the required field(s) — for raw metrics
   const has = (e: BodyEntry, ...fields: (keyof BodyEntry)[]) =>
     fields.every((f) => n(e[f]) > 0);
 
+  // Interpolate a missing field from surrounding entries that have it
+  const interpolate = (date: string, field: 'weightKg' | 'waistCm' | 'neckCm'): number => {
+    const before = sorted.filter((e) => e.date <= date && n(e[field]) > 0).pop();
+    const after = sorted.find((e) => e.date >= date && n(e[field]) > 0);
+    if (before && after && before.date !== after.date) {
+      const d1 = new Date(before.date + 'T12:00:00').getTime();
+      const d2 = new Date(after.date + 'T12:00:00').getTime();
+      const dt = new Date(date + 'T12:00:00').getTime();
+      const t = (dt - d1) / (d2 - d1);
+      return Math.round((n(before[field]) + t * (n(after[field]) - n(before[field]))) * 10) / 10;
+    }
+    return n(before?.[field]) || n(after?.[field]) || 0;
+  };
+
+  // Resolve a field: use own value if present, otherwise interpolate
+  const resolve = (e: BodyEntry, field: 'weightKg' | 'waistCm' | 'neckCm'): number => {
+    const v = n(e[field]);
+    return v > 0 ? v : interpolate(e.date, field);
+  };
+
   switch (key) {
+    // --- Raw metrics: only plot entries with actual data, connectNulls bridges gaps ---
     case 'weight':
       return entries.filter((e) => has(e, 'weightKg')).map((e) => ({ date: e.date, value: n(e.weightKg) }));
-
-    case 'body_fat_pct':
-      return entries.filter((e) => has(e, 'waistCm', 'neckCm')).map((e) => ({
-        date: e.date,
-        value: calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm)),
-      }));
-
-    case 'body_fat_kg':
-      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
-        return { date: e.date, value: Math.round(n(e.weightKg) * bf / 100 * 10) / 10 };
-      });
-
-    case 'lean_mass_pct':
-      return entries.filter((e) => has(e, 'waistCm', 'neckCm')).map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
-        return { date: e.date, value: Math.round((100 - bf) * 10) / 10 };
-      });
-
-    case 'lean_mass_kg':
-      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
-        return { date: e.date, value: Math.round(n(e.weightKg) * (1 - bf / 100) * 10) / 10 };
-      });
 
     case 'waist':
       return entries.filter((e) => has(e, 'waistCm')).map((e) => ({ date: e.date, value: n(e.waistCm) }));
@@ -156,10 +118,35 @@ export function getMetricData(
     case 'neck':
       return entries.filter((e) => has(e, 'neckCm')).map((e) => ({ date: e.date, value: n(e.neckCm) }));
 
+    // --- Calculated metrics: interpolate underlying fields, plot for every entry ---
+    case 'body_fat_pct':
+      return entries.filter((e) => resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => ({
+        date: e.date,
+        value: calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm)),
+      }));
+
+    case 'body_fat_kg':
+      return entries.filter((e) => resolve(e, 'weightKg') > 0 && resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => {
+        const bf = calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm));
+        return { date: e.date, value: Math.round(resolve(e, 'weightKg') * bf / 100 * 10) / 10 };
+      });
+
+    case 'lean_mass_pct':
+      return entries.filter((e) => resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => {
+        const bf = calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm));
+        return { date: e.date, value: Math.round((100 - bf) * 10) / 10 };
+      });
+
+    case 'lean_mass_kg':
+      return entries.filter((e) => resolve(e, 'weightKg') > 0 && resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => {
+        const bf = calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm));
+        return { date: e.date, value: Math.round(resolve(e, 'weightKg') * (1 - bf / 100) * 10) / 10 };
+      });
+
     case 'ffmi':
-      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
-        return { date: e.date, value: calcFFMI(n(e.weightKg), bf, n(settings.heightCm)) };
+      return entries.filter((e) => resolve(e, 'weightKg') > 0 && resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => {
+        const bf = calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm));
+        return { date: e.date, value: calcFFMI(resolve(e, 'weightKg'), bf, n(settings.heightCm)) };
       });
 
     case 'target_ffmi':
@@ -169,56 +156,54 @@ export function getMetricData(
       return entries.map((e) => ({ date: e.date, value: n(settings.targetBodyFatPct) }));
 
     case 'fat_to_lose_pct':
-      return entries.filter((e) => has(e, 'waistCm', 'neckCm')).map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
+      return entries.filter((e) => resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => {
+        const bf = calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm));
         return { date: e.date, value: Math.max(0, Math.round((bf - n(settings.targetBodyFatPct)) * 10) / 10) };
       });
 
     case 'fat_to_lose_kg':
-      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
-        const currentFatKg = n(e.weightKg) * bf / 100;
-        const targetFatKg = n(e.weightKg) * n(settings.targetBodyFatPct) / 100;
+      return entries.filter((e) => resolve(e, 'weightKg') > 0 && resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => {
+        const bf = calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm));
+        const currentFatKg = resolve(e, 'weightKg') * bf / 100;
+        const targetFatKg = resolve(e, 'weightKg') * n(settings.targetBodyFatPct) / 100;
         return { date: e.date, value: Math.max(0, Math.round((currentFatKg - targetFatKg) * 10) / 10) };
       });
 
-    case 'lean_to_gain_pct': {
-      return entries.filter((e) => has(e, 'waistCm', 'neckCm')).map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
+    case 'lean_to_gain_pct':
+      return entries.filter((e) => resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => {
+        const bf = calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm));
         const currentLeanPct = 100 - bf;
         const targetLeanPct = 100 - n(settings.targetBodyFatPct);
         return { date: e.date, value: Math.max(0, Math.round((targetLeanPct - currentLeanPct) * 10) / 10) };
       });
-    }
 
-    case 'lean_to_gain_kg': {
-      return entries.filter((e) => has(e, 'weightKg', 'waistCm', 'neckCm')).map((e) => {
-        const bf = calcBodyFatNavy(settings.sex, n(e.waistCm), n(e.neckCm), n(settings.heightCm));
-        const currentFFMI = calcFFMI(n(e.weightKg), bf, n(settings.heightCm));
+    case 'lean_to_gain_kg':
+      return entries.filter((e) => resolve(e, 'weightKg') > 0 && resolve(e, 'waistCm') > 0 && resolve(e, 'neckCm') > 0).map((e) => {
+        const bf = calcBodyFatNavy(settings.sex, resolve(e, 'waistCm'), resolve(e, 'neckCm'), n(settings.heightCm));
+        const currentFFMI = calcFFMI(resolve(e, 'weightKg'), bf, n(settings.heightCm));
         const delta = n(settings.targetFFMI) - currentFFMI;
         const heightM = n(settings.heightCm) / 100;
         return { date: e.date, value: Math.max(0, Math.round(delta * heightM * heightM * 10) / 10) };
       });
-    }
 
     case 'bmr':
-      return entries.filter((e) => has(e, 'weightKg')).map((e) => ({
+      return entries.filter((e) => resolve(e, 'weightKg') > 0).map((e) => ({
         date: e.date,
-        value: calcBMR(settings.sex, n(e.weightKg), n(settings.heightCm), age),
+        value: calcBMR(settings.sex, resolve(e, 'weightKg'), n(settings.heightCm), age),
       }));
 
     case 'tdee':
-      return entries.filter((e) => has(e, 'weightKg')).map((e) => {
-        const bmr = calcBMR(settings.sex, n(e.weightKg), n(settings.heightCm), age);
+      return entries.filter((e) => resolve(e, 'weightKg') > 0).map((e) => {
+        const bmr = calcBMR(settings.sex, resolve(e, 'weightKg'), n(settings.heightCm), age);
         const workoutCal = workoutSessions
           .filter((s) => s.date === e.date && s.completed)
           .reduce((sum, s) => sum + n(s.estimatedCalories), 0);
         return { date: e.date, value: calcTDEE(bmr, e.activityLevel) + workoutCal };
       });
 
-    case 'caloric_balance': {
-      return entries.filter((e) => has(e, 'weightKg')).map((e) => {
-        const bmr = calcBMR(settings.sex, n(e.weightKg), n(settings.heightCm), age);
+    case 'caloric_balance':
+      return entries.filter((e) => resolve(e, 'weightKg') > 0).map((e) => {
+        const bmr = calcBMR(settings.sex, resolve(e, 'weightKg'), n(settings.heightCm), age);
         const tdee = calcTDEE(bmr, e.activityLevel);
         const workoutCal = workoutSessions
           .filter((s) => s.date === e.date && s.completed)
@@ -229,7 +214,6 @@ export function getMetricData(
           .reduce((sum, m) => sum + n(m.calories), 0);
         return { date: e.date, value: consumed - totalExpenditure };
       });
-    }
 
     case 'food_calories': {
       const byDate: Record<string, number> = {};
