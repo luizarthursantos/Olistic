@@ -110,12 +110,12 @@ export function AnalyticsChartView({ chart }: AnalyticsChartViewProps) {
       const dataMax = Math.max(...values);
       const range = dataMax - dataMin || Math.abs(dataMax) * 0.1 || 1;
 
-      // Pick a step that is a multiple of 5 or 10
+      // Pick a step that is a clean integer (never < 1)
       const targetTicks = 5;
       const rawStep = range / targetTicks;
-      const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const magnitude = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1))));
       const candidates = [1, 2, 5, 10].map((m) => m * magnitude);
-      const step = candidates.find((c) => c >= rawStep) || candidates[candidates.length - 1];
+      const step = Math.max(1, candidates.find((c) => c >= rawStep) || candidates[candidates.length - 1]);
 
       const lo = Math.floor(dataMin / step) * step;
       const hi = Math.ceil(dataMax / step) * step;
