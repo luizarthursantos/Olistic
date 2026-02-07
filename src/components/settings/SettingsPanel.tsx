@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { ActivityLevel, ACTIVITY_LABELS, UnitSystem } from '../../types';
 import { exportToXlsx, importFromXlsx } from '../../utils/xlsxIO';
-import { X, Download, Upload, Sun, Moon, Database, Key } from 'lucide-react';
+import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone } from 'lucide-react';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -12,6 +12,35 @@ interface SettingsPanelProps {
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { settings, updateSettings, loadSampleData } = useStore();
   const [importStatus, setImportStatus] = useState<string>('');
+  const [canInstall, setCanInstall] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    // Check if already installed as PWA
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+      || (navigator as any).standalone === true;
+    setIsStandalone(standalone);
+
+    // Check if install prompt is available
+    if ((window as any).__pwaInstallPrompt) {
+      setCanInstall(true);
+    }
+    const handler = () => setCanInstall(true);
+    window.addEventListener('pwainstallready', handler);
+    return () => window.removeEventListener('pwainstallready', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    const prompt = (window as any).__pwaInstallPrompt;
+    if (prompt) {
+      prompt.prompt();
+      const result = await prompt.userChoice;
+      if (result.outcome === 'accepted') {
+        setIsStandalone(true);
+        setCanInstall(false);
+      }
+    }
+  };
 
   const handleExportXlsx = () => {
     const data = exportToXlsx();
@@ -191,6 +220,31 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             </p>
           </div>
         </div>
+
+        {!isStandalone && (
+          <div className="settings-section">
+            <h3 className="settings-section-title">Install App</h3>
+            {canInstall ? (
+              <button className="btn btn-primary" onClick={handleInstall}>
+                <Smartphone size={16} /> Install Olistic
+              </button>
+            ) : (
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                <p style={{ marginBottom: 8 }}><strong>Samsung Internet:</strong></p>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Tap the menu icon (&#9776;) at the bottom</li>
+                  <li>Tap <strong>"Add page to"</strong></li>
+                  <li>Select <strong>"Home screen"</strong></li>
+                </ol>
+                <p style={{ marginTop: 12, marginBottom: 8 }}><strong>Chrome:</strong></p>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Tap the menu icon (&#8942;) at the top right</li>
+                  <li>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong></li>
+                </ol>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="settings-section">
           <h3 className="settings-section-title">Data</h3>
