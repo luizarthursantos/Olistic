@@ -117,7 +117,9 @@ export function BodyTab() {
   const stats = useMemo(() => {
     if (!interpolatedEntry) return null;
 
-    const bodyFat = calcBodyFatNavy(settings.sex, interpolatedEntry.waistCm, interpolatedEntry.neckCm, settings.heightCm);
+    const waist = interpolatedEntry.waistCm || interpolateField(interpolatedEntry, 'waistCm');
+    const neck = interpolatedEntry.neckCm || interpolateField(interpolatedEntry, 'neckCm');
+    const bodyFat = calcBodyFatNavy(settings.sex, waist, neck, settings.heightCm);
     const ffmi = calcFFMI(interpolatedEntry.weightKg, bodyFat, settings.heightCm);
     const age = calcAge(settings.birthday);
     const bmr = calcBMR(settings.sex, interpolatedEntry.weightKg, settings.heightCm, age);
@@ -126,11 +128,27 @@ export function BodyTab() {
     const fatMassKg = interpolatedEntry.weightKg * (bodyFat / 100);
 
     return { bodyFat, ffmi, bmr, tdee, leanMassKg, fatMassKg };
-  }, [interpolatedEntry, settings]);
+  }, [interpolatedEntry, bodyEntries, settings]);
 
   const recentEntries = useMemo(() => {
     return [...bodyEntries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
   }, [bodyEntries]);
+
+  // Interpolate waist/neck for entries missing them
+  const interpolateField = (entry: BodyEntry, field: 'waistCm' | 'neckCm'): number => {
+    if (entry[field]) return entry[field];
+    const sorted = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
+    const before = sorted.filter((e) => e.date < entry.date && e[field]).pop();
+    const after = sorted.find((e) => e.date > entry.date && e[field]);
+    if (before && after) {
+      const d1 = new Date(before.date + 'T12:00:00').getTime();
+      const d2 = new Date(after.date + 'T12:00:00').getTime();
+      const dt = new Date(entry.date + 'T12:00:00').getTime();
+      const t = (dt - d1) / (d2 - d1);
+      return Math.round((before[field] + t * (after[field] - before[field])) * 10) / 10;
+    }
+    return before?.[field] || after?.[field] || 0;
+  };
 
   return (
     <div className="body-tab fade-in">
@@ -217,14 +235,17 @@ export function BodyTab() {
               </thead>
               <tbody>
                 {recentEntries.map((entry) => {
-                  const bf = calcBodyFatNavy(settings.sex, entry.waistCm, entry.neckCm, settings.heightCm);
+                  const waist = entry.waistCm || interpolateField(entry, 'waistCm');
+                  const neck = entry.neckCm || interpolateField(entry, 'neckCm');
+                  const bf = calcBodyFatNavy(settings.sex, waist, neck, settings.heightCm);
+                  const isEstimated = !entry.waistCm || !entry.neckCm;
                   return (
                     <tr key={entry.id}>
                       <td>{entry.date.slice(8,10)}-{entry.date.slice(5,7)}-{entry.date.slice(2,4)}</td>
                       <td>{entry.weightKg}</td>
-                      <td>{entry.waistCm}</td>
-                      <td>{entry.neckCm}</td>
-                      <td>{bf}</td>
+                      <td style={!entry.waistCm ? { color: 'var(--text-muted)', fontStyle: 'italic' } : undefined}>{waist || '–'}</td>
+                      <td style={!entry.neckCm ? { color: 'var(--text-muted)', fontStyle: 'italic' } : undefined}>{neck || '–'}</td>
+                      <td style={isEstimated ? { color: 'var(--text-muted)', fontStyle: 'italic' } : undefined}>{bf || '–'}</td>
                       {editMode && (
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>

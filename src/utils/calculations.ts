@@ -9,7 +9,7 @@ export function calcBodyFatNavy(
   neckCm: number,
   heightCm: number
 ): number {
-  if (waistCm <= neckCm || heightCm <= 0) return 0;
+  if (!waistCm || !neckCm || !heightCm || waistCm <= neckCm) return 0;
 
   if (sex === 'male') {
     // Male: 495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(height)) - 450
