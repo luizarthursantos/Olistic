@@ -1,4 +1,4 @@
-const CACHE_NAME = 'olistic-v2';
+const CACHE_NAME = 'olistic-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

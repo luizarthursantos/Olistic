@@ -10,7 +10,10 @@ createRoot(document.getElementById('root')!).render(
 )
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/Olistic/sw.js');
+  navigator.serviceWorker.register('/Olistic/sw.js', { updateViaCache: 'none' }).then((reg) => {
+    // Force update check on every page load
+    reg.update();
+  });
 }
 
 // Capture the beforeinstallprompt event for in-app install button
