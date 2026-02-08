@@ -4,7 +4,7 @@ import { MealType, FoodItem, MEAL_TYPE_LABELS } from '../../types';
 import { calcCaloriesFromMacros } from '../../utils/calculations';
 import { analyzeFoodPhoto, analyzeFoodDescription, FoodAnalysisResult } from '../../utils/analyzeFood';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { X, Search, Camera, Image, Loader, Check, Settings, Send, Trash2, Pencil, Sparkles } from 'lucide-react';
+import { X, Search, Camera, Image, Loader, Check, Settings, Send, Trash2, Pencil, Sparkles, Save } from 'lucide-react';
 
 interface AddMealModalProps {
   mealType: MealType;
@@ -30,6 +30,8 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   const [aiProcessing, setAiProcessing] = useState(false);
   const [aiError, setAiError] = useState('');
   const [aiResults, setAiResults] = useState<FoodAnalysisResult[]>([]);
+  const [fromAi, setFromAi] = useState(false);
+  const [savedFood, setSavedFood] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,6 +103,8 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
       sugarG: food.sugarG,
       fiberG: food.fiberG,
     });
+    setFromAi(false);
+    setSavedFood(false);
     setMode('manual');
   };
 
@@ -116,6 +120,8 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
       sugarG: newFood.sugarG,
       fiberG: newFood.fiberG,
     });
+    setFromAi(false);
+    setSavedFood(false);
     setShowNewFood(false);
     setMode('manual');
   };
@@ -173,6 +179,8 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
           sugarG: item.sugarG,
           fiberG: item.fiberG,
         });
+        setFromAi(true);
+        setSavedFood(false);
         setMode('manual');
       }
     } catch (err) {
@@ -205,6 +213,8 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
           sugarG: item.sugarG,
           fiberG: item.fiberG,
         });
+        setFromAi(true);
+        setSavedFood(false);
         setMode('manual');
       }
     } catch (err) {
@@ -224,6 +234,8 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
       sugarG: item.sugarG,
       fiberG: item.fiberG,
     });
+    setFromAi(true);
+    setSavedFood(false);
     setMode('manual');
   };
 
@@ -255,6 +267,8 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
       sugarG: item.sugarG,
       fiberG: item.fiberG,
     });
+    setFromAi(true);
+    setSavedFood(false);
     setMode('manual');
   };
 
@@ -274,6 +288,21 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
       });
     });
     onClose();
+  };
+
+  const saveAsFood = () => {
+    if (!form.name.trim()) return;
+    const base = baseMacros.current;
+    addFoodItem({
+      name: form.name,
+      proteinG: base.quantityG > 0 ? base.proteinG : form.proteinG,
+      carbsG: base.quantityG > 0 ? base.carbsG : form.carbsG,
+      fatG: base.quantityG > 0 ? base.fatG : form.fatG,
+      sugarG: base.quantityG > 0 ? base.sugarG : form.sugarG,
+      fiberG: base.quantityG > 0 ? base.fiberG : form.fiberG,
+      servingSize: `${base.quantityG > 0 ? base.quantityG : form.quantityG || 100}g`,
+    });
+    setSavedFood(true);
   };
 
   const save = () => {
@@ -754,6 +783,16 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
         {(!photoProcessing && !aiProcessing && (mode !== 'photo' || photoResults.length <= 1) && (mode !== 'ai' || aiResults.length <= 1)) && (
           <div className="modal-actions">
             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            {fromAi && form.name.trim() && (
+              <button
+                className="btn btn-secondary"
+                onClick={saveAsFood}
+                disabled={savedFood}
+                title="Save as reusable food item"
+              >
+                <Save size={14} /> {savedFood ? 'Saved' : 'Save Food'}
+              </button>
+            )}
             <button className="btn btn-primary" onClick={save} disabled={!form.name.trim()}>
               Add Meal
             </button>
