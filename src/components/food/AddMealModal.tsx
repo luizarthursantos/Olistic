@@ -317,7 +317,6 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                 placeholder="Search food items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
                 style={{ flex: 1 }}
               />
               {filteredFoods.length > 0 && (
