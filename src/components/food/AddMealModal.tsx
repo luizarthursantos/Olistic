@@ -292,15 +292,15 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
   const saveAsFood = () => {
     if (!form.name.trim()) return;
-    const base = baseMacros.current;
+    const qty = form.quantityG || 100;
     addFoodItem({
       name: form.name,
-      proteinG: base.quantityG > 0 ? base.proteinG : form.proteinG,
-      carbsG: base.quantityG > 0 ? base.carbsG : form.carbsG,
-      fatG: base.quantityG > 0 ? base.fatG : form.fatG,
-      sugarG: base.quantityG > 0 ? base.sugarG : form.sugarG,
-      fiberG: base.quantityG > 0 ? base.fiberG : form.fiberG,
-      servingSize: `${base.quantityG > 0 ? base.quantityG : form.quantityG || 100}g`,
+      proteinG: form.proteinG,
+      carbsG: form.carbsG,
+      fatG: form.fatG,
+      sugarG: form.sugarG,
+      fiberG: form.fiberG,
+      servingSize: `${qty}g`,
     });
     setSavedFood(true);
   };
