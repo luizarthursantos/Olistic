@@ -39,25 +39,19 @@ export function MacroTargetsModal({ date, onClose }: MacroTargetsModalProps) {
   }, []);
 
   const adjustPct = (which: 'protein' | 'carbs' | 'fat', value: number) => {
-    const clamped = Math.max(0, Math.min(100, value));
+    const clamped = Math.max(0, Math.min(70, value));
     if (which === 'protein') {
+      // Adjust carbs only, keep fat
       setProteinPct(clamped);
-      const remaining = 100 - clamped;
-      const ratio = carbsPct + fatPct > 0 ? carbsPct / (carbsPct + fatPct) : 0.5;
-      setCarbsPct(Math.round(remaining * ratio));
-      setFatPct(remaining - Math.round(remaining * ratio));
-    } else if (which === 'carbs') {
-      setCarbsPct(clamped);
-      const remaining = 100 - clamped;
-      const ratio = proteinPct + fatPct > 0 ? proteinPct / (proteinPct + fatPct) : 0.5;
-      setProteinPct(Math.round(remaining * ratio));
-      setFatPct(remaining - Math.round(remaining * ratio));
-    } else {
+      setCarbsPct(Math.max(0, 100 - clamped - fatPct));
+    } else if (which === 'fat') {
+      // Adjust carbs only, keep protein
       setFatPct(clamped);
-      const remaining = 100 - clamped;
-      const ratio = proteinPct + carbsPct > 0 ? proteinPct / (proteinPct + carbsPct) : 0.5;
-      setProteinPct(Math.round(remaining * ratio));
-      setCarbsPct(remaining - Math.round(remaining * ratio));
+      setCarbsPct(Math.max(0, 100 - proteinPct - clamped));
+    } else {
+      // Adjust fat only, keep protein
+      setCarbsPct(clamped);
+      setFatPct(Math.max(0, 100 - proteinPct - clamped));
     }
   };
 
@@ -112,7 +106,7 @@ export function MacroTargetsModal({ date, onClose }: MacroTargetsModalProps) {
           <input
             type="range"
             min={0}
-            max={100}
+            max={70}
             value={proteinPct}
             onChange={(e) => adjustPct('protein', Number(e.target.value))}
             style={{ width: '100%', accentColor: '#6c63ff' }}
@@ -125,7 +119,7 @@ export function MacroTargetsModal({ date, onClose }: MacroTargetsModalProps) {
           <input
             type="range"
             min={0}
-            max={100}
+            max={70}
             value={carbsPct}
             onChange={(e) => adjustPct('carbs', Number(e.target.value))}
             style={{ width: '100%', accentColor: '#34d399' }}
@@ -138,7 +132,7 @@ export function MacroTargetsModal({ date, onClose }: MacroTargetsModalProps) {
           <input
             type="range"
             min={0}
-            max={100}
+            max={70}
             value={fatPct}
             onChange={(e) => adjustPct('fat', Number(e.target.value))}
             style={{ width: '100%', accentColor: '#fbbf24' }}
