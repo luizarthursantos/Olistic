@@ -79,7 +79,10 @@ export function MacroTargetsModal({ date, onClose }: MacroTargetsModalProps) {
         </div>
 
         <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
-          Targets are forward-filled until updated. Setting targets for {date}.
+          Targets apply from {date} forward until you set new ones.
+          {existing && existing.date !== date && (
+            <span> Current values from {existing.date}.</span>
+          )}
         </p>
 
         <div className="form-group">
