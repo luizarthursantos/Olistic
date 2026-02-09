@@ -10,8 +10,8 @@ import { AddMealModal } from './AddMealModal';
 import { MacroTargetsModal } from './MacroTargetsModal';
 import './FoodTab.css';
 
-function QtyInput({ initialValue, onCommit }: { initialValue: number; onCommit: (v: number) => void }) {
-  const [val, setVal] = useState(String(initialValue));
+function QtyInput({ initialValue, onCommit }: { initialValue: number | undefined; onCommit: (v: number) => void }) {
+  const [val, setVal] = useState(initialValue ? String(initialValue) : '');
   return (
     <input
       type="number"
@@ -21,9 +21,10 @@ function QtyInput({ initialValue, onCommit }: { initialValue: number; onCommit: 
       onBlur={() => {
         const n = Number(val);
         if (n > 0) onCommit(n);
-        else setVal(String(initialValue));
+        else setVal(initialValue ? String(initialValue) : '');
       }}
       min={1}
+      placeholder="g"
       style={{ width: 52, padding: '2px 4px', fontSize: 11, textAlign: 'right' }}
     />
   );
@@ -321,7 +322,7 @@ export function FoodTab() {
                     <tr key={meal.id} className="meal-item-row">
                       <td className="col-name">{meal.name}</td>
                       <td className="col-num">
-                        {editMode && meal.quantityG != null ? (
+                        {editMode ? (
                           <QtyInput
                             initialValue={meal.quantityG}
                             onCommit={(v) => handleQuantityCommit(meal, v)}
