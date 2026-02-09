@@ -285,6 +285,9 @@ export function FoodTab() {
                   <tr key={`section-${type}`} className="meal-section-row">
                     <td className="col-name">
                       <span className="meal-section-name">{MEAL_TYPE_LABELS[type]}</span>
+                      <button className="btn btn-primary btn-sm btn-add-meal" onClick={() => openAddMeal(type)} style={{ marginLeft: 6, padding: '1px 5px' }}>
+                        <Plus size={11} />
+                      </button>
                     </td>
                     <td className="col-num meal-subtotal-val"></td>
                     <td className="col-num meal-subtotal-val">{sub.calories > 0 ? sub.calories : ''}</td>
@@ -293,11 +296,7 @@ export function FoodTab() {
                     <td className="col-num meal-subtotal-val">{sub.fatG > 0 ? sub.fatG.toFixed(0) : ''}</td>
                     <td className="col-num meal-subtotal-val">{sub.sugarG > 0 ? sub.sugarG.toFixed(0) : ''}</td>
                     <td className="col-num meal-subtotal-val">{sub.fiberG > 0 ? sub.fiberG.toFixed(0) : ''}</td>
-                    <td className="col-action">
-                      <button className="btn btn-primary btn-sm btn-add-meal" onClick={() => openAddMeal(type)}>
-                        <Plus size={13} />
-                      </button>
-                    </td>
+                    <td className="col-action"></td>
                   </tr>,
                   ...typeMeals.map((meal) => (
                     <tr key={meal.id} className="meal-item-row">
