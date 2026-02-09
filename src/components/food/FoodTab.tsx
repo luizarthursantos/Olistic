@@ -39,14 +39,14 @@ interface MacroRow {
 }
 
 export function FoodTab() {
-  const { selectedDate, getMealsForDate, deleteMealEntry, updateMealEntry, getMacroTargetsForDate } = useStore();
+  const { selectedDate, mealEntries, getMealsForDate, deleteMealEntry, updateMealEntry, getMacroTargetsForDate } = useStore();
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [addMealType, setAddMealType] = useState<MealType>('breakfast');
   const [showTargets, setShowTargets] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const meals = getMealsForDate(selectedDate);
+  const meals = useMemo(() => getMealsForDate(selectedDate), [mealEntries, selectedDate]);
   const targets = getMacroTargetsForDate(selectedDate);
 
   const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
