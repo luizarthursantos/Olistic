@@ -41,6 +41,7 @@ export interface AppState {
   // Food - Items
   foodItems: FoodItem[];
   addFoodItem: (item: Omit<FoodItem, 'id'>) => string;
+  updateFoodItem: (id: string, item: Partial<Omit<FoodItem, 'id'>>) => void;
   deleteFoodItem: (id: string) => void;
 
   // Food - Meals
@@ -162,6 +163,11 @@ export const useStore = create<AppState>((set, get) => ({
     set({ foodItems: items });
     saveToStorage('foodItems', items);
     return id;
+  },
+  updateFoodItem: (id, partial) => {
+    const items = get().foodItems.map(i => i.id === id ? { ...i, ...partial } : i);
+    set({ foodItems: items });
+    saveToStorage('foodItems', items);
   },
   deleteFoodItem: (id) => {
     const items = get().foodItems.filter(i => i.id !== id);

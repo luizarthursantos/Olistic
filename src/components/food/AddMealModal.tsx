@@ -15,12 +15,13 @@ interface AddMealModalProps {
 type AddMode = 'manual' | 'search' | 'photo' | 'ai';
 
 export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
-  const { addMealEntry, foodItems, addFoodItem, deleteFoodItem, settings } = useStore();
+  const { addMealEntry, foodItems, addFoodItem, updateFoodItem, deleteFoodItem, settings } = useStore();
   const [mode, setMode] = useState<AddMode>('manual');
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewFood, setShowNewFood] = useState(false);
   const [editFoods, setEditFoods] = useState(false);
   const [deleteFoodConfirm, setDeleteFoodConfirm] = useState<string | null>(null);
+  const [editingFood, setEditingFood] = useState<FoodItem | null>(null);
   const [photoProcessing, setPhotoProcessing] = useState(false);
   const [photoError, setPhotoError] = useState<string>('');
   const [photoResults, setPhotoResults] = useState<FoodAnalysisResult[]>([]);
@@ -403,13 +404,23 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                       </span>
                     </button>
                     {editFoods && (
-                      <button
-                        className="btn btn-icon btn-danger btn-sm"
-                        style={{ marginRight: 8, flexShrink: 0 }}
-                        onClick={() => setDeleteFoodConfirm(food.id)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <>
+                        <button
+                          className="btn btn-icon btn-secondary btn-sm"
+                          style={{ flexShrink: 0 }}
+                          onClick={() => setEditingFood(food)}
+                          title="Edit food"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          className="btn btn-icon btn-danger btn-sm"
+                          style={{ marginRight: 8, flexShrink: 0 }}
+                          onClick={() => setDeleteFoodConfirm(food.id)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
                     )}
                   </div>
                 ))
@@ -874,6 +885,89 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
             onCancel={() => setDeleteFoodConfirm(null)}
           />
         )}
+
+        {editingFood && (
+          <EditFoodModal
+            food={editingFood}
+            onSave={(updated) => {
+              updateFoodItem(editingFood.id, updated);
+              setEditingFood(null);
+            }}
+            onClose={() => setEditingFood(null)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EditFoodModal({ food, onSave, onClose }: {
+  food: FoodItem;
+  onSave: (data: Omit<FoodItem, 'id'>) => void;
+  onClose: () => void;
+}) {
+  const [ef, setEf] = useState({
+    name: food.name,
+    servingSize: food.servingSize,
+    proteinG: food.proteinG,
+    carbsG: food.carbsG,
+    fatG: food.fatG,
+    sugarG: food.sugarG,
+    fiberG: food.fiberG,
+  });
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title">Edit Food</h3>
+        <div className="form-group">
+          <label className="label">Name</label>
+          <input type="text" className="input" value={ef.name}
+            onChange={(e) => setEf({ ...ef, name: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label className="label">Serving Size</label>
+          <input type="text" className="input" value={ef.servingSize}
+            onChange={(e) => setEf({ ...ef, servingSize: e.target.value })} />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="label">Protein (g)</label>
+            <input type="number" className="input" value={ef.proteinG}
+              onChange={(e) => setEf({ ...ef, proteinG: Number(e.target.value) })} min={0} step={0.1} />
+          </div>
+          <div className="form-group">
+            <label className="label">Carbs (g)</label>
+            <input type="number" className="input" value={ef.carbsG}
+              onChange={(e) => setEf({ ...ef, carbsG: Number(e.target.value) })} min={0} step={0.1} />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="label">Fat (g)</label>
+            <input type="number" className="input" value={ef.fatG}
+              onChange={(e) => setEf({ ...ef, fatG: Number(e.target.value) })} min={0} step={0.1} />
+          </div>
+          <div className="form-group">
+            <label className="label">Sugar (g)</label>
+            <input type="number" className="input" value={ef.sugarG}
+              onChange={(e) => setEf({ ...ef, sugarG: Number(e.target.value) })} min={0} step={0.1} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="label">Fiber (g)</label>
+          <input type="number" className="input" value={ef.fiberG}
+            onChange={(e) => setEf({ ...ef, fiberG: Number(e.target.value) })} min={0} step={0.1} />
+        </div>
+        <div style={{ textAlign: 'center', fontWeight: 600, color: 'var(--accent)' }}>
+          {calcCaloriesFromMacros(ef.proteinG, ef.carbsG, ef.fatG, ef.fiberG)} kcal
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={() => onSave(ef)} disabled={!ef.name.trim()}>
+            Save
+          </button>
+        </div>
       </div>
     </div>
   );

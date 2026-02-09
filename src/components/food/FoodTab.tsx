@@ -121,16 +121,6 @@ export function FoodTab() {
     }
   };
 
-  const handleMacroEdit = (mealId: string, field: 'proteinG' | 'carbsG' | 'fatG' | 'sugarG' | 'fiberG', value: number) => {
-    const meal = meals.find((m) => m.id === mealId);
-    if (!meal) return;
-    const updated = { ...meal, [field]: value };
-    updateMealEntry(mealId, {
-      [field]: value,
-      calories: calcCaloriesFromMacros(updated.proteinG, updated.carbsG, updated.fatG, updated.fiberG),
-    });
-  };
-
   const calRemaining = targets ? targets.calories - totals.calories : 0;
 
   return (
@@ -326,31 +316,11 @@ export function FoodTab() {
                         )}
                       </td>
                       <td className="col-num">{meal.calories}</td>
-                      {editMode ? (
-                        <>
-                          {(['proteinG', 'carbsG', 'fatG', 'sugarG', 'fiberG'] as const).map((field) => (
-                            <td key={field} className="col-num">
-                              <input
-                                type="number"
-                                className="input"
-                                value={meal[field]}
-                                onChange={(e) => handleMacroEdit(meal.id, field, Number(e.target.value))}
-                                min={0}
-                                step={0.1}
-                                style={{ width: 44, padding: '2px 3px', fontSize: 11, textAlign: 'right' }}
-                              />
-                            </td>
-                          ))}
-                        </>
-                      ) : (
-                        <>
-                          <td className="col-num">{meal.proteinG}</td>
-                          <td className="col-num">{meal.carbsG}</td>
-                          <td className="col-num">{meal.fatG}</td>
-                          <td className="col-num">{meal.sugarG}</td>
-                          <td className="col-num">{meal.fiberG}</td>
-                        </>
-                      )}
+                      <td className="col-num">{meal.proteinG}</td>
+                      <td className="col-num">{meal.carbsG}</td>
+                      <td className="col-num">{meal.fatG}</td>
+                      <td className="col-num">{meal.sugarG}</td>
+                      <td className="col-num">{meal.fiberG}</td>
                       <td className="col-action">
                         {editMode && (
                           <button
