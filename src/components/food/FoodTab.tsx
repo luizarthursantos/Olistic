@@ -10,6 +10,25 @@ import { AddMealModal } from './AddMealModal';
 import { MacroTargetsModal } from './MacroTargetsModal';
 import './FoodTab.css';
 
+function QtyInput({ initialValue, onCommit }: { initialValue: number; onCommit: (v: number) => void }) {
+  const [val, setVal] = useState(String(initialValue));
+  return (
+    <input
+      type="number"
+      className="input input-inline-qty"
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={() => {
+        const n = Number(val);
+        if (n > 0) onCommit(n);
+        else setVal(String(initialValue));
+      }}
+      min={1}
+      style={{ width: 52, padding: '2px 4px', fontSize: 11, textAlign: 'right' }}
+    />
+  );
+}
+
 interface MacroRow {
   label: string;
   consumed: number;
@@ -102,7 +121,7 @@ export function FoodTab() {
     setDeleteConfirm(null);
   };
 
-  const handleQuantityEdit = (meal: typeof meals[0], newQty: number) => {
+  const handleQuantityCommit = (meal: typeof meals[0], newQty: number) => {
     const oldQty = meal.quantityG;
     if (oldQty && oldQty > 0 && newQty > 0) {
       const ratio = newQty / oldQty;
@@ -116,8 +135,8 @@ export function FoodTab() {
         proteinG, carbsG, fatG, sugarG, fiberG,
         calories: calcCaloriesFromMacros(proteinG, carbsG, fatG, fiberG),
       });
-    } else {
-      updateMealEntry(meal.id, { quantityG: newQty || undefined });
+    } else if (newQty > 0) {
+      updateMealEntry(meal.id, { quantityG: newQty });
     }
   };
 
@@ -302,14 +321,10 @@ export function FoodTab() {
                     <tr key={meal.id} className="meal-item-row">
                       <td className="col-name">{meal.name}</td>
                       <td className="col-num">
-                        {editMode && meal.quantityG ? (
-                          <input
-                            type="number"
-                            className="input input-inline-qty"
-                            value={meal.quantityG}
-                            onChange={(e) => handleQuantityEdit(meal, Number(e.target.value))}
-                            min={1}
-                            style={{ width: 52, padding: '2px 4px', fontSize: 11, textAlign: 'right' }}
+                        {editMode && meal.quantityG != null ? (
+                          <QtyInput
+                            initialValue={meal.quantityG}
+                            onCommit={(v) => handleQuantityCommit(meal, v)}
                           />
                         ) : (
                           meal.quantityG ? `${meal.quantityG}g` : ''
