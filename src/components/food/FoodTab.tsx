@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../common/ConfirmDialog';
 import { MealType, MEAL_TYPE_LABELS } from '../../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Plus, Trash2, Target, Pencil } from 'lucide-react';
+import { calcCaloriesFromMacros } from '../../utils/calculations';
 import { AddMealModal } from './AddMealModal';
 import { MacroTargetsModal } from './MacroTargetsModal';
 import './FoodTab.css';
@@ -18,7 +19,7 @@ interface MacroRow {
 }
 
 export function FoodTab() {
-  const { selectedDate, getMealsForDate, deleteMealEntry, getMacroTargetsForDate } = useStore();
+  const { selectedDate, getMealsForDate, deleteMealEntry, updateMealEntry, getMacroTargetsForDate } = useStore();
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [addMealType, setAddMealType] = useState<MealType>('breakfast');
   const [showTargets, setShowTargets] = useState(false);
@@ -99,6 +100,25 @@ export function FoodTab() {
   const handleDelete = (id: string) => {
     deleteMealEntry(id);
     setDeleteConfirm(null);
+  };
+
+  const handleQuantityEdit = (meal: typeof meals[0], newQty: number) => {
+    const oldQty = meal.quantityG;
+    if (oldQty && oldQty > 0 && newQty > 0) {
+      const ratio = newQty / oldQty;
+      const proteinG = Math.round(meal.proteinG * ratio * 10) / 10;
+      const carbsG = Math.round(meal.carbsG * ratio * 10) / 10;
+      const fatG = Math.round(meal.fatG * ratio * 10) / 10;
+      const sugarG = Math.round(meal.sugarG * ratio * 10) / 10;
+      const fiberG = Math.round(meal.fiberG * ratio * 10) / 10;
+      updateMealEntry(meal.id, {
+        quantityG: newQty,
+        proteinG, carbsG, fatG, sugarG, fiberG,
+        calories: calcCaloriesFromMacros(proteinG, carbsG, fatG, fiberG),
+      });
+    } else {
+      updateMealEntry(meal.id, { quantityG: newQty || undefined });
+    }
   };
 
   const calRemaining = targets ? targets.calories - totals.calories : 0;
@@ -282,7 +302,20 @@ export function FoodTab() {
                   ...typeMeals.map((meal) => (
                     <tr key={meal.id} className="meal-item-row">
                       <td className="col-name">{meal.name}</td>
-                      <td className="col-num">{meal.quantityG ? `${meal.quantityG}g` : ''}</td>
+                      <td className="col-num">
+                        {editMode && meal.quantityG ? (
+                          <input
+                            type="number"
+                            className="input input-inline-qty"
+                            value={meal.quantityG}
+                            onChange={(e) => handleQuantityEdit(meal, Number(e.target.value))}
+                            min={1}
+                            style={{ width: 52, padding: '2px 4px', fontSize: 11, textAlign: 'right' }}
+                          />
+                        ) : (
+                          meal.quantityG ? `${meal.quantityG}g` : ''
+                        )}
+                      </td>
                       <td className="col-num">{meal.calories}</td>
                       <td className="col-num">{meal.proteinG}</td>
                       <td className="col-num">{meal.carbsG}</td>
