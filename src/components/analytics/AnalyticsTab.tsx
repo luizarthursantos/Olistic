@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { AnalyticsChart, AnalyticsMetric, DateRangeOption } from '../../types';
-import { Plus, Trash2, Settings, Pencil } from 'lucide-react';
+import { Plus, Trash2, Settings, Pencil, Maximize2, X } from 'lucide-react';
 import { AnalyticsChartView } from './AnalyticsChartView';
 import { ChartConfigModal } from './ChartConfigModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -15,6 +15,7 @@ export function AnalyticsTab() {
   const [showConfig, setShowConfig] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [fullscreenChart, setFullscreenChart] = useState<AnalyticsChart | null>(null);
 
   const handleAddChart = () => {
     setConfigChart(null);
@@ -79,24 +80,33 @@ export function AnalyticsTab() {
             <div key={chart.id} className="analytics-chart-wrapper">
               <div className="analytics-chart-header">
                 <h3 className="analytics-chart-title">{chart.title}</h3>
-                {editMode && (
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button
-                      className="btn btn-icon btn-secondary btn-sm"
-                      onClick={() => handleEditChart(chart)}
-                      title="Edit"
-                    >
-                      <Settings size={14} />
-                    </button>
-                    <button
-                      className="btn btn-icon btn-danger btn-sm"
-                      onClick={() => setDeleteConfirm(chart.id)}
-                      title="Delete"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                )}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    className="btn btn-icon btn-secondary btn-sm"
+                    onClick={() => setFullscreenChart(chart)}
+                    title="Fullscreen"
+                  >
+                    <Maximize2 size={14} />
+                  </button>
+                  {editMode && (
+                    <>
+                      <button
+                        className="btn btn-icon btn-secondary btn-sm"
+                        onClick={() => handleEditChart(chart)}
+                        title="Edit"
+                      >
+                        <Settings size={14} />
+                      </button>
+                      <button
+                        className="btn btn-icon btn-danger btn-sm"
+                        onClick={() => setDeleteConfirm(chart.id)}
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <AnalyticsChartView chart={chart} dateRange={analyticsDateRange} />
             </div>
@@ -117,6 +127,22 @@ export function AnalyticsTab() {
           onConfirm={() => handleDelete(deleteConfirm)}
           onCancel={() => setDeleteConfirm(null)}
         />
+      )}
+
+      {fullscreenChart && (
+        <div className="fullscreen-chart-overlay" onClick={() => setFullscreenChart(null)}>
+          <div className="fullscreen-chart-container" onClick={(e) => e.stopPropagation()}>
+            <div className="fullscreen-chart-header">
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{fullscreenChart.title}</h3>
+              <button className="btn btn-icon btn-secondary btn-sm" onClick={() => setFullscreenChart(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="fullscreen-chart-body">
+              <AnalyticsChartView chart={fullscreenChart} dateRange={analyticsDateRange} fullscreen />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

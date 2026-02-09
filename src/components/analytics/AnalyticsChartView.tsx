@@ -19,6 +19,7 @@ import {
 interface AnalyticsChartViewProps {
   chart: AnalyticsChart;
   dateRange: DateRangeOption;
+  fullscreen?: boolean;
 }
 
 function getDateCutoff(range: DateRangeOption): string {
@@ -29,7 +30,7 @@ function getDateCutoff(range: DateRangeOption): string {
   return now.toISOString().split('T')[0];
 }
 
-export function AnalyticsChartView({ chart, dateRange }: AnalyticsChartViewProps) {
+export function AnalyticsChartView({ chart, dateRange, fullscreen }: AnalyticsChartViewProps) {
   const state = useStore();
 
   const chartData = useMemo(() => {
@@ -173,7 +174,7 @@ export function AnalyticsChartView({ chart, dateRange }: AnalyticsChartViewProps
 
   return (
     <div>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={fullscreen ? '100%' : 280}>
         <ComposedChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 5 : 5, bottom: 5, left: 0 }}>
           <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
           {xTicks.map((tick) => (
