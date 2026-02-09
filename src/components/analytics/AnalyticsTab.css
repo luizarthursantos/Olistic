@@ -135,12 +135,3 @@
   min-height: 0;
 }
 
-/* Landscape rotation on portrait mobile */
-@media (orientation: portrait) {
-  .fullscreen-chart-container {
-    transform: rotate(90deg);
-    transform-origin: center center;
-    width: 100vh;
-    height: 100vw;
-  }
-}

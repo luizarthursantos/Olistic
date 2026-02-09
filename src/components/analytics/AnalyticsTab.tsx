@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { AnalyticsChart, AnalyticsMetric, DateRangeOption } from '../../types';
 import { Plus, Trash2, Settings, Pencil, Maximize2, X } from 'lucide-react';
@@ -16,6 +16,39 @@ export function AnalyticsTab() {
   const [editMode, setEditMode] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [fullscreenChart, setFullscreenChart] = useState<AnalyticsChart | null>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+
+  const enterFullscreen = useCallback(async (chart: AnalyticsChart) => {
+    setFullscreenChart(chart);
+    // Wait for the overlay to render, then request native fullscreen + landscape
+    setTimeout(async () => {
+      const el = fullscreenRef.current;
+      if (el && el.requestFullscreen) {
+        try {
+          await el.requestFullscreen();
+          await (screen.orientation as any)?.lock?.('landscape').catch(() => {});
+        } catch {}
+      }
+    }, 50);
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    setFullscreenChart(null);
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  // Sync: if user presses hardware back / Esc to exit native fullscreen, close our overlay
+  useEffect(() => {
+    const handler = () => {
+      if (!document.fullscreenElement && fullscreenChart) {
+        setFullscreenChart(null);
+      }
+    };
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, [fullscreenChart]);
 
   const handleAddChart = () => {
     setConfigChart(null);
@@ -83,7 +116,7 @@ export function AnalyticsTab() {
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button
                     className="btn btn-icon btn-secondary btn-sm"
-                    onClick={() => setFullscreenChart(chart)}
+                    onClick={() => enterFullscreen(chart)}
                     title="Fullscreen"
                   >
                     <Maximize2 size={14} />
@@ -130,11 +163,11 @@ export function AnalyticsTab() {
       )}
 
       {fullscreenChart && (
-        <div className="fullscreen-chart-overlay" onClick={() => setFullscreenChart(null)}>
+        <div className="fullscreen-chart-overlay" ref={fullscreenRef} onClick={exitFullscreen}>
           <div className="fullscreen-chart-container" onClick={(e) => e.stopPropagation()}>
             <div className="fullscreen-chart-header">
               <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{fullscreenChart.title}</h3>
-              <button className="btn btn-icon btn-secondary btn-sm" onClick={() => setFullscreenChart(null)}>
+              <button className="btn btn-icon btn-secondary btn-sm" onClick={exitFullscreen}>
                 <X size={18} />
               </button>
             </div>
