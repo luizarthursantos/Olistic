@@ -4,7 +4,7 @@ import { MealType, FoodItem, MEAL_TYPE_LABELS } from '../../types';
 import { calcCaloriesFromMacros } from '../../utils/calculations';
 import { analyzeFoodPhoto, analyzeFoodDescription, FoodAnalysisResult } from '../../utils/analyzeFood';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { X, Search, Camera, Image, Loader, Check, Settings, Send, Trash2, Pencil, Sparkles, Save } from 'lucide-react';
+import { X, Search, Camera, Image, Loader, Settings, Send, Trash2, Pencil, Sparkles, Save } from 'lucide-react';
 
 interface AddMealModalProps {
   mealType: MealType;
@@ -169,17 +169,20 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
       );
       setPhotoResults(results);
 
-      if (results.length === 1) {
-        const item = results[0];
-        setFormWithBase({
-          name: item.name,
-          quantityG: item.quantityG,
-          proteinG: item.proteinG,
-          carbsG: item.carbsG,
-          fatG: item.fatG,
-          sugarG: item.sugarG,
-          fiberG: item.fiberG,
-        });
+      if (results.length >= 1) {
+        const combined = results.reduce(
+          (acc, item) => ({
+            name: acc.name,
+            quantityG: acc.quantityG + item.quantityG,
+            proteinG: Math.round((acc.proteinG + item.proteinG) * 10) / 10,
+            carbsG: Math.round((acc.carbsG + item.carbsG) * 10) / 10,
+            fatG: Math.round((acc.fatG + item.fatG) * 10) / 10,
+            sugarG: Math.round((acc.sugarG + item.sugarG) * 10) / 10,
+            fiberG: Math.round((acc.fiberG + item.fiberG) * 10) / 10,
+          }),
+          { name: results.length === 1 ? results[0].name : (photoDescription.trim() || 'Photo meal'), quantityG: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
+        );
+        setFormWithBase(combined);
         setFromAi(true);
         setSavedFood(false);
         setMode('manual');
@@ -203,17 +206,20 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     try {
       const results = await analyzeFoodDescription(settings.claudeApiKey, aiDescription);
       setAiResults(results);
-      if (results.length === 1) {
-        const item = results[0];
-        setFormWithBase({
-          name: item.name,
-          quantityG: item.quantityG,
-          proteinG: item.proteinG,
-          carbsG: item.carbsG,
-          fatG: item.fatG,
-          sugarG: item.sugarG,
-          fiberG: item.fiberG,
-        });
+      if (results.length >= 1) {
+        const combined = results.reduce(
+          (acc, item) => ({
+            name: acc.name,
+            quantityG: acc.quantityG + item.quantityG,
+            proteinG: Math.round((acc.proteinG + item.proteinG) * 10) / 10,
+            carbsG: Math.round((acc.carbsG + item.carbsG) * 10) / 10,
+            fatG: Math.round((acc.fatG + item.fatG) * 10) / 10,
+            sugarG: Math.round((acc.sugarG + item.sugarG) * 10) / 10,
+            fiberG: Math.round((acc.fiberG + item.fiberG) * 10) / 10,
+          }),
+          { name: results.length === 1 ? results[0].name : aiDescription.trim(), quantityG: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
+        );
+        setFormWithBase(combined);
         setFromAi(true);
         setSavedFood(false);
         setMode('manual');
@@ -225,71 +231,6 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     }
   };
 
-  const selectAiResult = (item: FoodAnalysisResult) => {
-    setFormWithBase({
-      name: item.name,
-      quantityG: item.quantityG,
-      proteinG: item.proteinG,
-      carbsG: item.carbsG,
-      fatG: item.fatG,
-      sugarG: item.sugarG,
-      fiberG: item.fiberG,
-    });
-    setFromAi(true);
-    setSavedFood(false);
-    setMode('manual');
-  };
-
-  const addAllAiResults = () => {
-    aiResults.forEach((item) => {
-      addMealEntry({
-        date,
-        mealType,
-        name: item.name,
-        quantityG: item.quantityG,
-        proteinG: item.proteinG,
-        carbsG: item.carbsG,
-        fatG: item.fatG,
-        sugarG: item.sugarG,
-        fiberG: item.fiberG,
-        calories: item.calories,
-      });
-    });
-    onClose();
-  };
-
-  const selectPhotoResult = (item: FoodAnalysisResult) => {
-    setFormWithBase({
-      name: item.name,
-      quantityG: item.quantityG,
-      proteinG: item.proteinG,
-      carbsG: item.carbsG,
-      fatG: item.fatG,
-      sugarG: item.sugarG,
-      fiberG: item.fiberG,
-    });
-    setFromAi(true);
-    setSavedFood(false);
-    setMode('manual');
-  };
-
-  const addAllPhotoResults = () => {
-    photoResults.forEach((item) => {
-      addMealEntry({
-        date,
-        mealType,
-        name: item.name,
-        quantityG: item.quantityG,
-        proteinG: item.proteinG,
-        carbsG: item.carbsG,
-        fatG: item.fatG,
-        sugarG: item.sugarG,
-        fiberG: item.fiberG,
-        calories: item.calories,
-      });
-    });
-    onClose();
-  };
 
   const saveAsFood = () => {
     if (!form.name.trim()) return;
@@ -506,32 +447,6 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
               </p>
             )}
 
-            {aiResults.length > 1 && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600 }}>
-                    {aiResults.length} items detected
-                  </p>
-                  <button className="btn btn-primary btn-sm" onClick={addAllAiResults}>
-                    <Check size={14} /> Add All
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {aiResults.map((item, i) => (
-                    <button
-                      key={i}
-                      className="food-search-item"
-                      onClick={() => selectAiResult(item)}
-                    >
-                      <span className="food-search-name">{item.name}</span>
-                      <span className="food-search-macros">
-                        {item.calories} kcal | P:{item.proteinG}g C:{item.carbsG}g F:{item.fatG}g
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -648,50 +563,11 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
               </p>
             )}
 
-            {/* Multiple results from photo */}
-            {photoResults.length > 1 && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600 }}>
-                    {photoResults.length} items detected
-                  </p>
-                  <button className="btn btn-primary btn-sm" onClick={addAllPhotoResults}>
-                    <Check size={14} /> Add All
-                  </button>
-                </div>
-                {photoPreview && (
-                  <img
-                    src={photoPreview}
-                    alt="Uploaded food"
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: 120,
-                      borderRadius: 'var(--radius-sm)',
-                      marginBottom: 12,
-                    }}
-                  />
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {photoResults.map((item, i) => (
-                    <button
-                      key={i}
-                      className="food-search-item"
-                      onClick={() => selectPhotoResult(item)}
-                    >
-                      <span className="food-search-name">{item.name}</span>
-                      <span className="food-search-macros">
-                        {item.calories} kcal | P:{item.proteinG}g C:{item.carbsG}g F:{item.fatG}g
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {/* Manual form (always shown for final entry) */}
-        {(mode === 'manual' || mode === 'photo' || mode === 'ai') && !photoProcessing && !aiProcessing && photoResults.length <= 1 && aiResults.length <= 1 && (
+        {(mode === 'manual' || mode === 'photo' || mode === 'ai') && !photoProcessing && !aiProcessing && (
           <>
             <div className="form-row">
               <div className="form-group" style={{ flex: 2 }}>
@@ -791,7 +667,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
           </>
         )}
 
-        {(!photoProcessing && !aiProcessing && (mode !== 'photo' || photoResults.length <= 1) && (mode !== 'ai' || aiResults.length <= 1)) && (
+        {(!photoProcessing && !aiProcessing) && (
           <div className="modal-actions">
             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
             {fromAi && form.name.trim() && (
