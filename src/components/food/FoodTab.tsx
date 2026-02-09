@@ -284,10 +284,10 @@ export function FoodTab() {
                 return [
                   <tr key={`section-${type}`} className="meal-section-row">
                     <td className="col-name">
-                      <span className="meal-section-name">{MEAL_TYPE_LABELS[type]}</span>
-                      <button className="btn btn-primary btn-sm btn-add-meal" onClick={() => openAddMeal(type)} style={{ marginLeft: 6, padding: '1px 5px' }}>
+                      <button className="btn btn-primary btn-sm btn-add-meal" onClick={() => openAddMeal(type)} style={{ marginRight: 6, padding: '1px 5px' }}>
                         <Plus size={11} />
                       </button>
+                      <span className="meal-section-name">{MEAL_TYPE_LABELS[type]}</span>
                     </td>
                     <td className="col-num meal-subtotal-val"></td>
                     <td className="col-num meal-subtotal-val">{sub.calories > 0 ? sub.calories : ''}</td>
