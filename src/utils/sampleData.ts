@@ -58,21 +58,21 @@ function generateBodyEntries(): BodyEntry[] {
 // Sample food items
 function generateFoodItems(): FoodItem[] {
   return [
-    { id: uuid(), name: 'Chicken Breast (150g)', proteinG: 46, carbsG: 0, fatG: 5, sugarG: 0, fiberG: 0, servingSize: '150g' },
-    { id: uuid(), name: 'Brown Rice (200g cooked)', proteinG: 5, carbsG: 44, fatG: 2, sugarG: 0, fiberG: 3, servingSize: '200g' },
-    { id: uuid(), name: 'Salmon Fillet (150g)', proteinG: 34, carbsG: 0, fatG: 18, sugarG: 0, fiberG: 0, servingSize: '150g' },
-    { id: uuid(), name: 'Greek Yogurt (200g)', proteinG: 20, carbsG: 8, fatG: 10, sugarG: 6, fiberG: 0, servingSize: '200g' },
-    { id: uuid(), name: 'Banana', proteinG: 1, carbsG: 27, fatG: 0, sugarG: 14, fiberG: 3, servingSize: '1 medium' },
-    { id: uuid(), name: 'Oatmeal (80g dry)', proteinG: 10, carbsG: 54, fatG: 5, sugarG: 1, fiberG: 8, servingSize: '80g' },
-    { id: uuid(), name: 'Eggs (2 large)', proteinG: 12, carbsG: 1, fatG: 10, sugarG: 0, fiberG: 0, servingSize: '2 eggs' },
-    { id: uuid(), name: 'Broccoli (200g)', proteinG: 6, carbsG: 14, fatG: 1, sugarG: 3, fiberG: 5, servingSize: '200g' },
-    { id: uuid(), name: 'Whey Protein Shake', proteinG: 25, carbsG: 3, fatG: 2, sugarG: 1, fiberG: 0, servingSize: '1 scoop' },
-    { id: uuid(), name: 'Avocado (half)', proteinG: 2, carbsG: 6, fatG: 15, sugarG: 0, fiberG: 7, servingSize: '100g' },
-    { id: uuid(), name: 'Sweet Potato (200g)', proteinG: 3, carbsG: 40, fatG: 0, sugarG: 10, fiberG: 6, servingSize: '200g' },
-    { id: uuid(), name: 'Almonds (30g)', proteinG: 6, carbsG: 6, fatG: 15, sugarG: 1, fiberG: 4, servingSize: '30g' },
-    { id: uuid(), name: 'Whole Wheat Bread (2 slices)', proteinG: 7, carbsG: 24, fatG: 2, sugarG: 4, fiberG: 4, servingSize: '2 slices' },
-    { id: uuid(), name: 'Tuna Can (120g)', proteinG: 30, carbsG: 0, fatG: 1, sugarG: 0, fiberG: 0, servingSize: '120g' },
-    { id: uuid(), name: 'Pasta (200g cooked)', proteinG: 7, carbsG: 50, fatG: 1, sugarG: 2, fiberG: 2, servingSize: '200g' },
+    { id: uuid(), name: 'Chicken Breast (150g)', proteinG: 46, carbsG: 0, fatG: 5, sugarG: 0, fiberG: 0, servingSize: 150 },
+    { id: uuid(), name: 'Brown Rice (200g cooked)', proteinG: 5, carbsG: 44, fatG: 2, sugarG: 0, fiberG: 3, servingSize: 200 },
+    { id: uuid(), name: 'Salmon Fillet (150g)', proteinG: 34, carbsG: 0, fatG: 18, sugarG: 0, fiberG: 0, servingSize: 150 },
+    { id: uuid(), name: 'Greek Yogurt (200g)', proteinG: 20, carbsG: 8, fatG: 10, sugarG: 6, fiberG: 0, servingSize: 200 },
+    { id: uuid(), name: 'Banana', proteinG: 1, carbsG: 27, fatG: 0, sugarG: 14, fiberG: 3, servingSize: 120 },
+    { id: uuid(), name: 'Oatmeal (80g dry)', proteinG: 10, carbsG: 54, fatG: 5, sugarG: 1, fiberG: 8, servingSize: 80 },
+    { id: uuid(), name: 'Eggs (2 large)', proteinG: 12, carbsG: 1, fatG: 10, sugarG: 0, fiberG: 0, servingSize: 100 },
+    { id: uuid(), name: 'Broccoli (200g)', proteinG: 6, carbsG: 14, fatG: 1, sugarG: 3, fiberG: 5, servingSize: 200 },
+    { id: uuid(), name: 'Whey Protein Shake', proteinG: 25, carbsG: 3, fatG: 2, sugarG: 1, fiberG: 0, servingSize: 30 },
+    { id: uuid(), name: 'Avocado (half)', proteinG: 2, carbsG: 6, fatG: 15, sugarG: 0, fiberG: 7, servingSize: 100 },
+    { id: uuid(), name: 'Sweet Potato (200g)', proteinG: 3, carbsG: 40, fatG: 0, sugarG: 10, fiberG: 6, servingSize: 200 },
+    { id: uuid(), name: 'Almonds (30g)', proteinG: 6, carbsG: 6, fatG: 15, sugarG: 1, fiberG: 4, servingSize: 30 },
+    { id: uuid(), name: 'Whole Wheat Bread (2 slices)', proteinG: 7, carbsG: 24, fatG: 2, sugarG: 4, fiberG: 4, servingSize: 60 },
+    { id: uuid(), name: 'Tuna Can (120g)', proteinG: 30, carbsG: 0, fatG: 1, sugarG: 0, fiberG: 0, servingSize: 120 },
+    { id: uuid(), name: 'Pasta (200g cooked)', proteinG: 7, carbsG: 50, fatG: 1, sugarG: 2, fiberG: 2, servingSize: 200 },
   ];
 }
 

@@ -46,7 +46,7 @@ export interface FoodItem {
   fatG: number;
   sugarG: number;
   fiberG: number;
-  servingSize: string;
+  servingSize: number;
 }
 
 export interface MealEntry {

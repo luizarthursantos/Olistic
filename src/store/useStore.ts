@@ -154,8 +154,13 @@ export const useStore = create<AppState>((set, get) => ({
     return sorted.find(t => t.date <= date);
   },
 
-  // Food Items
-  foodItems: loadFromStorage<FoodItem[]>('foodItems', []),
+  // Food Items – migrate legacy string servingSize to number
+  foodItems: loadFromStorage<FoodItem[]>('foodItems', []).map(f => ({
+    ...f,
+    servingSize: typeof f.servingSize === 'string'
+      ? (Number((f.servingSize as string).replace(/[^\d.]/g, '')) || 100)
+      : (f.servingSize || 100),
+  })),
   addFoodItem: (item) => {
     const id = uuid();
     const newItem = { ...item, id };

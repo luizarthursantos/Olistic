@@ -79,7 +79,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     fatG: 0,
     sugarG: 0,
     fiberG: 0,
-    servingSize: '100g',
+    servingSize: 100,
   });
 
   const calories = calcCaloriesFromMacros(form.proteinG, form.carbsG, form.fatG, form.fiberG);
@@ -88,13 +88,8 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     f.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const parseServingGrams = (serving: string): number => {
-    const match = serving.match(/(\d+(?:\.\d+)?)\s*g/i);
-    return match ? Number(match[1]) : 100;
-  };
-
   const selectFood = (food: FoodItem) => {
-    const qty = parseServingGrams(food.servingSize);
+    const qty = food.servingSize || 100;
     setFormWithBase({
       name: food.name,
       quantityG: qty,
@@ -111,10 +106,9 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
   const saveNewFood = () => {
     addFoodItem(newFood);
-    const qty = parseServingGrams(newFood.servingSize);
     setFormWithBase({
       name: newFood.name,
-      quantityG: qty,
+      quantityG: newFood.servingSize || 100,
       proteinG: newFood.proteinG,
       carbsG: newFood.carbsG,
       fatG: newFood.fatG,
@@ -242,7 +236,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
       fatG: form.fatG,
       sugarG: form.sugarG,
       fiberG: form.fiberG,
-      servingSize: `${qty}g`,
+      servingSize: qty,
     });
     setSavedFood(true);
   };
@@ -700,12 +694,13 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                 />
               </div>
               <div className="form-group">
-                <label className="label">Serving Size</label>
+                <label className="label">Serving Size (g)</label>
                 <input
-                  type="text"
+                  type="number"
                   className="input"
-                  value={newFood.servingSize}
-                  onChange={(e) => setNewFood({ ...newFood, servingSize: e.target.value })}
+                  value={newFood.servingSize || ''}
+                  onChange={(e) => setNewFood({ ...newFood, servingSize: Number(e.target.value) })}
+                  min={1}
                 />
               </div>
               <div className="form-row">
@@ -801,9 +796,9 @@ function EditFoodModal({ food, onSave, onClose }: {
             onChange={(e) => setEf({ ...ef, name: e.target.value })} />
         </div>
         <div className="form-group">
-          <label className="label">Serving Size</label>
-          <input type="text" className="input" value={ef.servingSize}
-            onChange={(e) => setEf({ ...ef, servingSize: e.target.value })} />
+          <label className="label">Serving Size (g)</label>
+          <input type="number" className="input" value={ef.servingSize || ''}
+            onChange={(e) => setEf({ ...ef, servingSize: Number(e.target.value) })} min={1} />
         </div>
         <div className="form-row">
           <div className="form-group">
