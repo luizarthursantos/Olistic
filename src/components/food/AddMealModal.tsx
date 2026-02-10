@@ -89,7 +89,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   );
 
   const parseServingGrams = (serving: string): number => {
-    const match = serving.match(/(\d+)\s*g/i);
+    const match = serving.match(/(\d+(?:\.\d+)?)\s*g/i);
     return match ? Number(match[1]) : 100;
   };
 
