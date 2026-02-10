@@ -4,6 +4,8 @@ export type UnitSystem = 'metric' | 'imperial';
 export type ThemeMode = 'light' | 'dark';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
+export type AiProvider = 'claude' | 'gemini';
+
 export interface UserSettings {
   birthday: string; // ISO date
   sex: Sex;
@@ -16,6 +18,8 @@ export interface UserSettings {
   theme: ThemeMode;
   onboardingComplete: boolean;
   claudeApiKey: string;
+  geminiApiKey: string;
+  aiProvider: AiProvider;
 }
 
 export interface BodyEntry {

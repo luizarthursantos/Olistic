@@ -97,6 +97,8 @@ const defaultSettings: UserSettings = {
   theme: 'dark',
   onboardingComplete: false,
   claudeApiKey: '',
+  geminiApiKey: '',
+  aiProvider: 'claude',
 };
 
 const today = new Date().toISOString().split('T')[0];

@@ -83,6 +83,9 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     servingSize: 100,
   });
 
+  const aiProvider = settings.aiProvider || 'claude';
+  const activeApiKey = aiProvider === 'gemini' ? settings.geminiApiKey : settings.claudeApiKey;
+
   const calories = calcCaloriesFromMacros(form.proteinG, form.carbsG, form.fatG, form.fiberG);
 
   const filteredFoods = foodItems.filter((f) =>
@@ -139,8 +142,8 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   const handlePhotoAnalyze = async () => {
     if (!photoPreview) return;
 
-    if (!settings.claudeApiKey) {
-      setPhotoError('Claude API key required. Set it in Settings.');
+    if (!activeApiKey) {
+      setPhotoError('API key required. Set it in Settings.');
       return;
     }
 
@@ -160,7 +163,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
     try {
       const results = await analyzeFoodPhoto(
-        settings.claudeApiKey, base64Data, mediaType, photoDescription || undefined,
+        activeApiKey, base64Data, mediaType, photoDescription || undefined, aiProvider,
       );
       setPhotoResults(results);
 
@@ -189,15 +192,15 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
   const handleAiAnalyze = async () => {
     if (!aiDescription.trim()) return;
-    if (!settings.claudeApiKey) {
-      setAiError('Claude API key required. Set it in Settings.');
+    if (!activeApiKey) {
+      setAiError('API key required. Set it in Settings.');
       return;
     }
     setAiProcessing(true);
     setAiError('');
     setAiResults([]);
     try {
-      const results = await analyzeFoodDescription(settings.claudeApiKey, aiDescription);
+      const results = await analyzeFoodDescription(activeApiKey, aiDescription, aiProvider);
       setAiResults(results);
       if (results.length >= 1) {
         const combined = results.reduce(
@@ -421,7 +424,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
         {mode === 'ai' && (
           <div style={{ marginBottom: 16 }}>
-            {!settings.claudeApiKey && (
+            {!activeApiKey && (
               <div
                 style={{
                   padding: '12px 16px',
@@ -433,7 +436,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                 }}
               >
                 <Settings size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                Claude API key required. Set it in <strong>Settings</strong> to use AI analysis.
+                API key required. Set it in <strong>Settings</strong> to use AI analysis.
               </div>
             )}
 
@@ -455,7 +458,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                   className="btn btn-primary"
                   style={{ width: '100%' }}
                   onClick={handleAiAnalyze}
-                  disabled={!aiDescription.trim() || !settings.claudeApiKey}
+                  disabled={!aiDescription.trim() || !activeApiKey}
                 >
                   <Sparkles size={16} /> Analyze
                 </button>
@@ -481,7 +484,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
         {mode === 'photo' && (
           <div style={{ marginBottom: 16 }}>
-            {!settings.claudeApiKey && (
+            {!activeApiKey && (
               <div
                 style={{
                   padding: '12px 16px',
@@ -493,15 +496,15 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                 }}
               >
                 <Settings size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                Claude API key required. Set it in <strong>Settings</strong> to use photo analysis.
+                API key required. Set it in <strong>Settings</strong> to use photo analysis.
               </div>
             )}
 
             {/* Camera and Gallery buttons */}
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 12 }}>
               <label
-                className={`btn ${settings.claudeApiKey ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ cursor: settings.claudeApiKey ? 'pointer' : 'not-allowed', opacity: settings.claudeApiKey ? 1 : 0.5 }}
+                className={`btn ${activeApiKey ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ cursor: activeApiKey ? 'pointer' : 'not-allowed', opacity: activeApiKey ? 1 : 0.5 }}
               >
                 <Camera size={16} /> Camera
                 <input
@@ -511,12 +514,12 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                   capture="environment"
                   onChange={handlePhotoSelect}
                   style={{ display: 'none' }}
-                  disabled={!settings.claudeApiKey}
+                  disabled={!activeApiKey}
                 />
               </label>
               <label
-                className={`btn ${settings.claudeApiKey ? 'btn-secondary' : 'btn-secondary'}`}
-                style={{ cursor: settings.claudeApiKey ? 'pointer' : 'not-allowed', opacity: settings.claudeApiKey ? 1 : 0.5 }}
+                className={`btn ${activeApiKey ? 'btn-secondary' : 'btn-secondary'}`}
+                style={{ cursor: activeApiKey ? 'pointer' : 'not-allowed', opacity: activeApiKey ? 1 : 0.5 }}
               >
                 <Image size={16} /> Gallery
                 <input
@@ -525,7 +528,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                   accept="image/*"
                   onChange={handlePhotoSelect}
                   style={{ display: 'none' }}
-                  disabled={!settings.claudeApiKey}
+                  disabled={!activeApiKey}
                 />
               </label>
             </div>

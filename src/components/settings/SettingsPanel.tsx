@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import { ActivityLevel, ACTIVITY_LABELS, UnitSystem } from '../../types';
+import { ActivityLevel, ACTIVITY_LABELS, UnitSystem, AiProvider } from '../../types';
 import { exportToXlsx, importFromXlsx } from '../../utils/xlsxIO';
 import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone } from 'lucide-react';
 import './SettingsPanel.css';
@@ -205,7 +205,26 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         </div>
 
         <div className="settings-section">
-          <h3 className="settings-section-title">Integrations</h3>
+          <h3 className="settings-section-title">AI Food Analysis</h3>
+          <div className="form-group">
+            <label className="label">AI Provider</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                className={`btn btn-sm ${settings.aiProvider === 'claude' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => updateSettings({ aiProvider: 'claude' as AiProvider })}
+                style={{ flex: 1 }}
+              >
+                Claude
+              </button>
+              <button
+                className={`btn btn-sm ${settings.aiProvider === 'gemini' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => updateSettings({ aiProvider: 'gemini' as AiProvider })}
+                style={{ flex: 1 }}
+              >
+                Gemini
+              </button>
+            </div>
+          </div>
           <div className="form-group">
             <label className="label"><Key size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Claude API Key</label>
             <input
@@ -215,10 +234,20 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               onChange={(e) => updateSettings({ claudeApiKey: e.target.value })}
               placeholder="sk-ant-..."
             />
-            <p className="text-muted text-sm" style={{ marginTop: 4 }}>
-              Required for photo-based food analysis. Your key is stored locally.
-            </p>
           </div>
+          <div className="form-group">
+            <label className="label"><Key size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Gemini API Key</label>
+            <input
+              type="password"
+              className="input"
+              value={settings.geminiApiKey}
+              onChange={(e) => updateSettings({ geminiApiKey: e.target.value })}
+              placeholder="AIza..."
+            />
+          </div>
+          <p className="text-muted text-sm" style={{ marginTop: 4 }}>
+            API key for the selected provider is required for AI food analysis. Keys are stored locally.
+          </p>
         </div>
 
         {!isStandalone && (
