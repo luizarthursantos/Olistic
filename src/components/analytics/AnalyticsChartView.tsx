@@ -20,6 +20,7 @@ interface AnalyticsChartViewProps {
   chart: AnalyticsChart;
   dateRange: DateRangeOption;
   fullscreen?: boolean;
+  interactive?: boolean;
 }
 
 function getDateCutoff(range: DateRangeOption): string {
@@ -30,7 +31,7 @@ function getDateCutoff(range: DateRangeOption): string {
   return now.toISOString().split('T')[0];
 }
 
-export function AnalyticsChartView({ chart, dateRange, fullscreen }: AnalyticsChartViewProps) {
+export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }: AnalyticsChartViewProps) {
   const state = useStore();
   const lineAlphaHex = Math.round(((state.settings.chartLineAlpha ?? 60) / 100) * 255)
     .toString(16).padStart(2, '0');
@@ -217,14 +218,16 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen }: AnalyticsCh
               tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v))}
             />
           )}
-          <Tooltip
-            contentStyle={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 8,
-              fontSize: 12,
-            }}
-          />
+          {interactive !== false && (
+            <Tooltip
+              contentStyle={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 8,
+                fontSize: 12,
+              }}
+            />
+          )}
           <Legend wrapperStyle={{ fontSize: 12 }} />
           {chart.metrics.map((metric) => {
             const metricDef = AVAILABLE_METRICS.find((m) => m.key === metric.key);

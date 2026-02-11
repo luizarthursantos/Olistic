@@ -141,7 +141,7 @@ export function AnalyticsTab() {
                   )}
                 </div>
               </div>
-              <AnalyticsChartView chart={chart} dateRange={analyticsDateRange} />
+              <AnalyticsChartView chart={chart} dateRange={analyticsDateRange} interactive={editMode} />
             </div>
           ))}
         </div>

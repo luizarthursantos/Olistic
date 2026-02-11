@@ -21,7 +21,7 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
   const [showMetricPicker, setShowMetricPicker] = useState(false);
 
   const addMetric = (metricDef: MetricDefinition) => {
-    if (metrics.length >= 3) return;
+    if (metrics.length >= 4) return;
     const newMetric: AnalyticsMetric = {
       key: metricDef.key,
       label: metricDef.label,
@@ -83,9 +83,9 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <label className="label" style={{ margin: 0 }}>
-              Metrics ({metrics.length}/3)
+              Metrics ({metrics.length}/4)
             </label>
-            {metrics.length < 3 && (
+            {metrics.length < 4 && (
               <button className="btn btn-primary btn-sm" onClick={() => setShowMetricPicker(true)}>
                 <Plus size={14} /> Add Metric
               </button>
