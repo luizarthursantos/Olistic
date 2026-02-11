@@ -176,7 +176,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
   const hasRightAxis = chart.metrics.some((m) => m.axis === 'right');
 
   return (
-    <div style={fullscreen ? { width: '100%', height: '100%' } : undefined}>
+    <div style={{ ...(fullscreen ? { width: '100%', height: '100%' } : {}), ...(interactive === false ? { pointerEvents: 'none' } : {}) }}>
       <ResponsiveContainer width="100%" height={fullscreen ? '100%' : 280}>
         <ComposedChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 5 : 5, bottom: 5, left: 0 }}>
           <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
