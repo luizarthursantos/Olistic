@@ -54,6 +54,7 @@ export function FoodTab() {
   const totals = useMemo(() => {
     return meals.reduce(
       (acc, m) => ({
+        quantityG: acc.quantityG + (m.quantityG || 0),
         calories: acc.calories + m.calories,
         proteinG: acc.proteinG + m.proteinG,
         carbsG: acc.carbsG + m.carbsG,
@@ -61,7 +62,7 @@ export function FoodTab() {
         sugarG: acc.sugarG + m.sugarG,
         fiberG: acc.fiberG + m.fiberG,
       }),
-      { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 }
+      { quantityG: 0, calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 }
     );
   }, [meals]);
 
@@ -95,13 +96,14 @@ export function FoodTab() {
   }, [totals, targets]);
 
   const mealSubtotals = useMemo(() => {
-    const result: Record<MealType, { calories: number; proteinG: number; carbsG: number; fatG: number; sugarG: number; fiberG: number }> = {
-      breakfast: { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
-      lunch: { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
-      dinner: { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
-      snack: { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
+    const result: Record<MealType, { quantityG: number; calories: number; proteinG: number; carbsG: number; fatG: number; sugarG: number; fiberG: number }> = {
+      breakfast: { quantityG: 0, calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
+      lunch: { quantityG: 0, calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
+      dinner: { quantityG: 0, calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
+      snack: { quantityG: 0, calories: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
     };
     meals.forEach((m) => {
+      result[m.mealType].quantityG += m.quantityG || 0;
       result[m.mealType].calories += m.calories;
       result[m.mealType].proteinG += m.proteinG;
       result[m.mealType].carbsG += m.carbsG;
@@ -309,7 +311,7 @@ export function FoodTab() {
                       </button>
                       <span className="meal-section-name">{MEAL_TYPE_LABELS[type]}</span>
                     </td>
-                    <td className="col-num meal-subtotal-val"></td>
+                    <td className="col-num meal-subtotal-val">{sub.quantityG > 0 ? sub.quantityG : ''}</td>
                     <td className="col-num meal-subtotal-val">{sub.calories > 0 ? sub.calories : ''}</td>
                     <td className="col-num meal-subtotal-val">{sub.proteinG > 0 ? sub.proteinG.toFixed(0) : ''}</td>
                     <td className="col-num meal-subtotal-val">{sub.carbsG > 0 ? sub.carbsG.toFixed(0) : ''}</td>
