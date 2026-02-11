@@ -205,6 +205,25 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         </div>
 
         <div className="settings-section">
+          <h3 className="settings-section-title">Charts</h3>
+          <div className="form-group">
+            <label className="label">Line Alpha (moving avg enabled): {settings.chartLineAlpha ?? 60}%</label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={settings.chartLineAlpha ?? 60}
+              onChange={(e) => updateSettings({ chartLineAlpha: Number(e.target.value) })}
+              style={{ width: '100%' }}
+            />
+            <p className="text-muted text-sm" style={{ marginTop: 4 }}>
+              Opacity of the raw data line when moving average overlay is shown.
+            </p>
+          </div>
+        </div>
+
+        <div className="settings-section">
           <h3 className="settings-section-title">AI Food Analysis</h3>
           <div className="form-group">
             <label className="label">AI Provider</label>

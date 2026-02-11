@@ -99,6 +99,7 @@ const defaultSettings: UserSettings = {
   claudeApiKey: '',
   geminiApiKey: '',
   aiProvider: 'claude',
+  chartLineAlpha: 60,
 };
 
 const today = new Date().toISOString().split('T')[0];

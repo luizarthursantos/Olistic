@@ -32,6 +32,8 @@ function getDateCutoff(range: DateRangeOption): string {
 
 export function AnalyticsChartView({ chart, dateRange, fullscreen }: AnalyticsChartViewProps) {
   const state = useStore();
+  const lineAlphaHex = Math.round(((state.settings.chartLineAlpha ?? 60) / 100) * 255)
+    .toString(16).padStart(2, '0');
 
   const chartData = useMemo(() => {
     const cutoff = getDateCutoff(dateRange);
@@ -237,7 +239,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen }: AnalyticsCh
                   key={metric.key}
                   yAxisId={yAxisId}
                   dataKey={metric.key}
-                  fill={hasMA ? `${metric.color}33` : `${metric.color}99`}
+                  fill={hasMA ? `${metric.color}${lineAlphaHex}` : `${metric.color}99`}
                   name={name}
                 />
               );
@@ -249,7 +251,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen }: AnalyticsCh
                 yAxisId={yAxisId}
                 type={hasMA ? 'linear' : 'monotone'}
                 dataKey={metric.key}
-                stroke={hasMA ? `${metric.color}33` : metric.color}
+                stroke={hasMA ? `${metric.color}${lineAlphaHex}` : metric.color}
                 strokeWidth={hasMA ? 1 : 2}
                 dot={false}
                 name={name}

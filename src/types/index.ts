@@ -20,6 +20,7 @@ export interface UserSettings {
   claudeApiKey: string;
   geminiApiKey: string;
   aiProvider: AiProvider;
+  chartLineAlpha: number; // 0-100, line opacity % when moving average enabled
 }
 
 export interface BodyEntry {
