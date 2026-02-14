@@ -156,15 +156,25 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
 
   const calcTotalCalories = () => {
     let totalCalories = 0;
+
+    // Sum explicit cardio calories
+    let totalCardioMinutes = 0;
     exerciseSessions.forEach((exSession) => {
       const exercise = exercises.find((e) => e.id === exSession.exerciseId);
       if (exercise?.isCardio && exSession.cardioMinutes) {
         totalCalories += estimateCardioCalories(latestWeight, exSession.cardioMinutes, exercise.name);
-      } else {
-        const completedSets = exSession.sets.filter((s) => s.completed).length;
-        totalCalories += estimateWorkoutCalories(latestWeight, completedSets * 1.5, false);
+        totalCardioMinutes += exSession.cardioMinutes;
       }
     });
+
+    // Use actual elapsed time for weightlifting (total duration minus cardio)
+    const durationSeconds = isViewingCompleted ? completedDuration : elapsed;
+    const elapsedMinutes = durationSeconds / 60;
+    const weightliftingMinutes = Math.max(0, elapsedMinutes - totalCardioMinutes);
+    if (weightliftingMinutes > 0) {
+      totalCalories += estimateWorkoutCalories(latestWeight, weightliftingMinutes, false);
+    }
+
     return Math.round(totalCalories);
   };
 
