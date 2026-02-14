@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutTemplate, WorkoutExerciseTemplate, Exercise } from '../../types';
-import { X, Plus, Trash2, GripVertical } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, Pencil } from 'lucide-react';
 
 interface WorkoutTemplateModalProps {
   template: WorkoutTemplate | null;
@@ -11,7 +11,7 @@ interface WorkoutTemplateModalProps {
 const COLORS = ['#6c63ff', '#34d399', '#f87171', '#fbbf24', '#60a5fa', '#a78bfa', '#fb923c', '#e879f9'];
 
 export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModalProps) {
-  const { exercises, addExercise, addWorkoutTemplate, updateWorkoutTemplate } = useStore();
+  const { exercises, addExercise, updateExercise: storeUpdateExercise, deleteExercise: storeDeleteExercise, addWorkoutTemplate, updateWorkoutTemplate } = useStore();
   const [name, setName] = useState(template?.name || '');
   const [color, setColor] = useState(template?.color || COLORS[0]);
   const [templateExercises, setTemplateExercises] = useState<WorkoutExerciseTemplate[]>(
@@ -21,6 +21,12 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
   const [newExerciseName, setNewExerciseName] = useState('');
   const [newExerciseIsCardio, setNewExerciseIsCardio] = useState(false);
   const [showCreateExercise, setShowCreateExercise] = useState(false);
+  const [editExercises, setEditExercises] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [editExName, setEditExName] = useState('');
+  const [editExIcon, setEditExIcon] = useState('');
+  const [editExCardio, setEditExCardio] = useState(false);
+  const [deleteExConfirm, setDeleteExConfirm] = useState<string | null>(null);
 
   const addExerciseToTemplate = (exercise: Exercise) => {
     setTemplateExercises([
@@ -64,6 +70,28 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
     });
     setNewExerciseName('');
     setShowCreateExercise(false);
+  };
+
+  const startEditExercise = (ex: Exercise) => {
+    setEditingExercise(ex);
+    setEditExName(ex.name);
+    setEditExIcon(ex.icon);
+    setEditExCardio(ex.isCardio);
+  };
+
+  const saveEditExercise = () => {
+    if (!editingExercise || !editExName.trim()) return;
+    storeUpdateExercise(editingExercise.id, {
+      name: editExName.trim(),
+      icon: editExIcon,
+      isCardio: editExCardio,
+    });
+    setEditingExercise(null);
+  };
+
+  const confirmDeleteExercise = (id: string) => {
+    storeDeleteExercise(id);
+    setDeleteExConfirm(null);
   };
 
   const save = () => {
@@ -230,36 +258,71 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
             <div className="modal" onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h3 className="modal-title" style={{ margin: 0 }}>Add Exercise</h3>
-                <button className="btn btn-icon btn-secondary" onClick={() => setShowExercisePicker(false)}>
-                  <X size={18} />
-                </button>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    className={`btn btn-sm ${editExercises ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setEditExercises(!editExercises)}
+                  >
+                    <Pencil size={13} /> {editExercises ? 'Done' : 'Edit'}
+                  </button>
+                  <button className="btn btn-icon btn-secondary" onClick={() => { setShowExercisePicker(false); setEditExercises(false); }}>
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
               <div style={{ maxHeight: 400, overflowY: 'auto' }}>
                 {exercises.map((exercise) => (
-                  <button
+                  <div
                     key={exercise.id}
-                    className="food-search-item"
-                    onClick={() => addExerciseToTemplate(exercise)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 8,
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'none',
-                      border: 'none',
                       borderBottom: '1px solid var(--border-color)',
-                      color: 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: 14,
-                      fontFamily: 'inherit',
-                      textAlign: 'left',
                     }}
                   >
-                    <span>{exercise.icon}</span>
-                    <span style={{ flex: 1 }}>{exercise.name}</span>
-                    {exercise.isCardio && <span className="badge badge-success">Cardio</span>}
-                  </button>
+                    <button
+                      className="food-search-item"
+                      onClick={() => !editExercises && addExerciseToTemplate(exercise)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        flex: 1,
+                        padding: '10px 12px',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-primary)',
+                        cursor: editExercises ? 'default' : 'pointer',
+                        fontSize: 14,
+                        fontFamily: 'inherit',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span>{exercise.icon}</span>
+                      <span style={{ flex: 1 }}>{exercise.name}</span>
+                      {exercise.isCardio && <span className="badge badge-success">Cardio</span>}
+                    </button>
+                    {editExercises && (
+                      <>
+                        <button
+                          className="btn btn-icon btn-secondary btn-sm"
+                          style={{ flexShrink: 0 }}
+                          onClick={() => startEditExercise(exercise)}
+                          title="Edit exercise"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          className="btn btn-icon btn-danger btn-sm"
+                          style={{ flexShrink: 0, marginRight: 4 }}
+                          onClick={() => setDeleteExConfirm(exercise.id)}
+                          title="Delete exercise"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 ))}
               </div>
               <div style={{ marginTop: 12 }}>
@@ -293,6 +356,64 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
                   </div>
                 )}
               </div>
+
+              {/* Edit exercise modal */}
+              {editingExercise && (
+                <div className="modal-overlay" onClick={() => setEditingExercise(null)}>
+                  <div className="modal" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="modal-title">Edit Exercise</h3>
+                    <div className="form-group">
+                      <label className="label">Name</label>
+                      <input
+                        type="text"
+                        className="input"
+                        value={editExName}
+                        onChange={(e) => setEditExName(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="label">Icon</label>
+                      <input
+                        type="text"
+                        className="input"
+                        value={editExIcon}
+                        onChange={(e) => setEditExIcon(e.target.value)}
+                        style={{ width: 60 }}
+                      />
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 12, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={editExCardio}
+                        onChange={(e) => setEditExCardio(e.target.checked)}
+                      />
+                      Cardio exercise
+                    </label>
+                    <div className="modal-actions">
+                      <button className="btn btn-secondary" onClick={() => setEditingExercise(null)}>Cancel</button>
+                      <button className="btn btn-primary" onClick={saveEditExercise} disabled={!editExName.trim()}>
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Delete exercise confirm */}
+              {deleteExConfirm && (
+                <div className="modal-overlay" onClick={() => setDeleteExConfirm(null)}>
+                  <div className="modal" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="modal-title">Delete Exercise</h3>
+                    <p style={{ fontSize: 13, marginBottom: 16 }}>
+                      Are you sure? This will remove the exercise from the list. Templates using it will show "Unknown".
+                    </p>
+                    <div className="modal-actions">
+                      <button className="btn btn-secondary" onClick={() => setDeleteExConfirm(null)}>Cancel</button>
+                      <button className="btn btn-danger" onClick={() => confirmDeleteExercise(deleteExConfirm)}>Delete</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

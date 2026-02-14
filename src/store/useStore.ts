@@ -54,6 +54,8 @@ export interface AppState {
   // Exercises
   exercises: Exercise[];
   addExercise: (exercise: Omit<Exercise, 'id'>) => string;
+  updateExercise: (id: string, partial: Partial<Omit<Exercise, 'id'>>) => void;
+  deleteExercise: (id: string) => void;
 
   // Workout Templates
   workoutTemplates: WorkoutTemplate[];
@@ -214,6 +216,16 @@ export const useStore = create<AppState>((set, get) => ({
     set({ exercises });
     saveToStorage('exercises', exercises);
     return id;
+  },
+  updateExercise: (id, partial) => {
+    const exercises = get().exercises.map(e => e.id === id ? { ...e, ...partial } : e);
+    set({ exercises });
+    saveToStorage('exercises', exercises);
+  },
+  deleteExercise: (id) => {
+    const exercises = get().exercises.filter(e => e.id !== id);
+    set({ exercises });
+    saveToStorage('exercises', exercises);
   },
 
   // Workout Templates
