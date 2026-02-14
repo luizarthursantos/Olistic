@@ -211,8 +211,11 @@ export function getMetricData(
         return { date: e.date, value: calcTDEE(bmr, e.activityLevel) + workoutCal };
       });
 
-    case 'caloric_balance':
-      return entries.filter((e) => resolve(e, 'weightKg') > 0).map((e) => {
+    case 'caloric_balance': {
+      // Only include dates where meals were actually logged, otherwise
+      // consumed=0 produces a misleading large negative balance.
+      const mealDates = new Set(mealEntries.map((m) => m.date));
+      return entries.filter((e) => resolve(e, 'weightKg') > 0 && mealDates.has(e.date)).map((e) => {
         const bmr = calcBMR(settings.sex, resolve(e, 'weightKg'), n(settings.heightCm), age);
         const tdee = calcTDEE(bmr, e.activityLevel);
         const workoutCal = workoutSessions
@@ -224,6 +227,7 @@ export function getMetricData(
           .reduce((sum, m) => sum + n(m.calories), 0);
         return { date: e.date, value: consumed - totalExpenditure };
       });
+    }
 
     case 'food_calories': {
       const byDate: Record<string, number> = {};
