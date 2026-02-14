@@ -102,7 +102,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
       .filter((m) => m.axis === 'right')
       .flatMap((m) => [m.key, chart.showMovingAverage ? `${m.key}_ma` : null].filter(Boolean) as string[]);
 
-    const niceTicks = (keys: string[]): { domain: [number, number]; ticks: number[] } | undefined => {
+    const niceTicks = (keys: string[], includeZero: boolean): { domain: [number, number]; ticks: number[] } | undefined => {
       const values: number[] = [];
       chartData.forEach((point) => {
         keys.forEach((k) => {
@@ -111,8 +111,12 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
         });
       });
       if (values.length === 0) return undefined;
-      const dataMin = Math.min(...values);
-      const dataMax = Math.max(...values);
+      let dataMin = Math.min(...values);
+      let dataMax = Math.max(...values);
+      if (includeZero) {
+        dataMin = Math.min(dataMin, 0);
+        dataMax = Math.max(dataMax, 0);
+      }
       const range = dataMax - dataMin || Math.abs(dataMax) * 0.1 || 1;
 
       // Pick a step that is a clean integer (never < 1)
@@ -132,10 +136,10 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
     };
 
     return {
-      left: niceTicks(leftKeys),
-      right: niceTicks(rightKeys),
+      left: niceTicks(leftKeys, !!chart.includeZeroLeft),
+      right: niceTicks(rightKeys, !!chart.includeZeroRight),
     };
-  }, [chartData, chart.metrics, chart.showMovingAverage]);
+  }, [chartData, chart.metrics, chart.showMovingAverage, chart.includeZeroLeft, chart.includeZeroRight]);
 
   // Compute X-axis ticks: Sundays for short ranges, 1st of month for longer
   const xTicks = useMemo(() => {

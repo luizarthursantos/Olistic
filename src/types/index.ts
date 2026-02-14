@@ -123,6 +123,8 @@ export interface AnalyticsChart {
   dateRange: DateRangeOption;
   movingAverageDays: number;
   showMovingAverage: boolean;
+  includeZeroLeft?: boolean;
+  includeZeroRight?: boolean;
 }
 
 export interface AnalyticsMetric {

@@ -18,6 +18,8 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
   const [metrics, setMetrics] = useState<AnalyticsMetric[]>(chart?.metrics || []);
   const [showMovingAverage, setShowMovingAverage] = useState(chart?.showMovingAverage || false);
   const [movingAverageDays, setMovingAverageDays] = useState(chart?.movingAverageDays || 7);
+  const [includeZeroLeft, setIncludeZeroLeft] = useState(chart?.includeZeroLeft || false);
+  const [includeZeroRight, setIncludeZeroRight] = useState(chart?.includeZeroRight || false);
   const [showMetricPicker, setShowMetricPicker] = useState(false);
 
   const addMetric = (metricDef: MetricDefinition) => {
@@ -42,7 +44,7 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
 
   const save = () => {
     if (!title.trim() || metrics.length === 0) return;
-    const data = { title, metrics, dateRange: chart?.dateRange || '6M' as const, showMovingAverage, movingAverageDays };
+    const data = { title, metrics, dateRange: chart?.dateRange || '6M' as const, showMovingAverage, movingAverageDays, includeZeroLeft, includeZeroRight };
     if (chart) {
       updateAnalyticsChart(chart.id, data);
     } else {
@@ -172,6 +174,29 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
               />
             </div>
           )}
+        </div>
+
+        {/* Y-Axis Zero */}
+        <div className="form-group">
+          <label className="label" style={{ marginBottom: 8 }}>Y-Axis Include Zero</label>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={includeZeroLeft}
+                onChange={(e) => setIncludeZeroLeft(e.target.checked)}
+              />
+              Left axis
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={includeZeroRight}
+                onChange={(e) => setIncludeZeroRight(e.target.checked)}
+              />
+              Right axis
+            </label>
+          </div>
         </div>
 
         <div className="modal-actions">
