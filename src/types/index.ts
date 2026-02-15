@@ -1,5 +1,5 @@
 export type Sex = 'male' | 'female';
-export type ActivityLevel = 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extra_active';
+export type ActivityLevel = 'sedentary' | 'slightly_active' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extra_active';
 export type UnitSystem = 'metric' | 'imperial';
 export type ThemeMode = 'light' | 'dark';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -140,6 +140,7 @@ export type DateRangeOption = '1M' | '3M' | '6M' | '12M' | '24M' | '36M' | 'ALL'
 
 export const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
   sedentary: 1.2,
+  slightly_active: 1.3,
   lightly_active: 1.375,
   moderately_active: 1.55,
   very_active: 1.725,
@@ -148,6 +149,7 @@ export const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
 
 export const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   sedentary: 'Sedentary (office job)',
+  slightly_active: 'Slightly Active (1-2 days/week)',
   lightly_active: 'Lightly Active (1-3 days/week)',
   moderately_active: 'Moderately Active (3-5 days/week)',
   very_active: 'Very Active (6-7 days/week)',

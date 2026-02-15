@@ -269,9 +269,6 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
           {chart.showMovingAverage &&
             chart.metrics.map((metric) => {
               const metricDef = AVAILABLE_METRICS.find((m) => m.key === metric.key);
-              const isBar = (metric.chartType || 'line') === 'bar';
-              // No MA line for bar metrics
-              if (isBar) return null;
               return (
                 <Line
                   key={`${metric.key}_ma`}
