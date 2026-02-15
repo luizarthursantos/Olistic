@@ -7,7 +7,7 @@ export function DateSelector() {
   const { selectedDate, setSelectedDate } = useStore();
 
   const changeDate = (days: number) => {
-    const d = new Date(selectedDate);
+    const d = new Date(selectedDate + 'T12:00:00');
     d.setDate(d.getDate() + days);
     setSelectedDate(toLocalDateStr(d));
   };
