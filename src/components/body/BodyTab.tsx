@@ -200,9 +200,9 @@ export function BodyTab() {
           </div>
           <div className="stat-card">
             <div className="stat-card-value">
-              {(stats.bodyFat - settings.targetBodyFatPct).toFixed(1)}%
+              {(stats.weight - stats.leanMassKg / (1 - settings.targetBodyFatPct / 100)).toFixed(1)} kg
             </div>
-            <div className="stat-card-label">Fat to Lose</div>
+            <div className="stat-card-label">Weight to Lose</div>
           </div>
           </div>
         </div>
