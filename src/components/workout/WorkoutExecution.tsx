@@ -55,19 +55,20 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   });
 
   const [sessionDate, setSessionDate] = useState(() => existingSession?.date || toLocalDateStr(new Date()));
-  const [startTime] = useState(() => existingSession?.startTime || new Date().toISOString());
+  const [startTime, setStartTime] = useState(() => existingSession?.startTime || new Date().toISOString());
+  const [endTime, setEndTime] = useState(() => existingSession?.endTime || '');
   const [elapsed, setElapsed] = useState(0);
   const [editSets, setEditSets] = useState(false);
 
   // Compute static duration for completed sessions
   const completedDuration = useMemo(() => {
-    if (isViewingCompleted && existingSession?.startTime && existingSession?.endTime) {
+    if (isViewingCompleted && startTime && endTime) {
       return Math.floor(
-        (new Date(existingSession.endTime).getTime() - new Date(existingSession.startTime).getTime()) / 1000
+        (new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000
       );
     }
     return 0;
-  }, [isViewingCompleted, existingSession]);
+  }, [isViewingCompleted, startTime, endTime]);
 
   useEffect(() => {
     if (isViewingCompleted || preview) return;
@@ -197,6 +198,8 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     if (!sessionId) return;
     updateWorkoutSession(sessionId, {
       date: sessionDate,
+      startTime,
+      endTime: endTime || undefined,
       exercises: exerciseSessions,
       estimatedCalories: calcTotalCalories(),
     });
@@ -215,6 +218,19 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
     return `${h > 0 ? h + ':' : ''}${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  const isoToTimeStr = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const timeStrToIso = (baseIso: string, timeStr: string) => {
+    const d = new Date(baseIso);
+    const [h, m] = timeStr.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+    return d.toISOString();
   };
 
   const getExerciseName = (id: string) => exercises.find((e) => e.id === id)?.name || 'Unknown';
@@ -270,6 +286,36 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
               font: 'inherit',
               padding: 0,
               cursor: 'pointer',
+            }}
+          />
+           ·{' '}
+          <input
+            type="time"
+            value={isoToTimeStr(startTime)}
+            onChange={(e) => setStartTime(timeStrToIso(startTime, e.target.value))}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'inherit',
+              font: 'inherit',
+              padding: 0,
+              cursor: 'pointer',
+              width: 60,
+            }}
+          />
+          {' - '}
+          <input
+            type="time"
+            value={isoToTimeStr(endTime)}
+            onChange={(e) => setEndTime(timeStrToIso(endTime || startTime, e.target.value))}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'inherit',
+              font: 'inherit',
+              padding: 0,
+              cursor: 'pointer',
+              width: 60,
             }}
           />
            · {existingSession.estimatedCalories} kcal
