@@ -1,6 +1,16 @@
 import { ActivityLevel, ACTIVITY_MULTIPLIERS, BodyEntry, WorkoutSet } from '../types';
 
 /**
+ * Format a Date as YYYY-MM-DD in the local timezone
+ */
+export function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * Navy Method body fat calculation
  */
 export function calcBodyFatNavy(
@@ -143,7 +153,7 @@ export function movingAverage(data: { date: string; value: number }[], windowDay
   return sorted.map((point, i) => {
     const cutoff = new Date(point.date);
     cutoff.setDate(cutoff.getDate() - windowDays);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
+    const cutoffStr = toLocalDateStr(cutoff);
     const window = sorted.filter(
       (p, j) => j <= i && p.date >= cutoffStr
     );

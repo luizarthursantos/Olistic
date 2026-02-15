@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
+import { toLocalDateStr } from '../../utils/calculations';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface WorkoutCalendarProps {
@@ -84,7 +85,7 @@ export function WorkoutCalendar({ onViewSession }: WorkoutCalendarProps) {
     return map;
   }, [workoutSessions, workoutTemplates]);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalDateStr(new Date());
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',

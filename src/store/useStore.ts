@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { v4 as uuid } from 'uuid';
+import { toLocalDateStr } from '../utils/calculations';
 import {
   UserSettings,
   BodyEntry,
@@ -104,7 +105,7 @@ const defaultSettings: UserSettings = {
   chartLineAlpha: 60,
 };
 
-const today = new Date().toISOString().split('T')[0];
+const today = toLocalDateStr(new Date());
 
 export const useStore = create<AppState>((set, get) => ({
   // Settings

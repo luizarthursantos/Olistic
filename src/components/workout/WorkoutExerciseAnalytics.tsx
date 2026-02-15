@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
-import { calcOneRepMax, getBestOneRepMax } from '../../utils/calculations';
+import { calcOneRepMax, getBestOneRepMax, toLocalDateStr } from '../../utils/calculations';
 import {
   LineChart,
   Line,
@@ -78,8 +78,8 @@ export function WorkoutExerciseAnalytics() {
 
     const allDates: string[] = [];
     const d = new Date(first + 'T12:00:00');
-    while (d.toISOString().split('T')[0] <= last) {
-      allDates.push(d.toISOString().split('T')[0]);
+    while (toLocalDateStr(d) <= last) {
+      allDates.push(toLocalDateStr(d));
       d.setDate(d.getDate() + 1);
     }
 
@@ -119,15 +119,15 @@ export function WorkoutExerciseAnalytics() {
     if (span <= 120) {
       const d = new Date(first + 'T12:00:00');
       d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
-      while (d.toISOString().split('T')[0] <= last) {
-        ticks.push(d.toISOString().split('T')[0]);
+      while (toLocalDateStr(d) <= last) {
+        ticks.push(toLocalDateStr(d));
         d.setDate(d.getDate() + 7);
       }
     } else {
       const startD = new Date(first + 'T12:00:00');
       const d = new Date(startD.getFullYear(), startD.getMonth() + 1, 1, 12);
-      while (d.toISOString().split('T')[0] <= last) {
-        ticks.push(d.toISOString().split('T')[0]);
+      while (toLocalDateStr(d) <= last) {
+        ticks.push(toLocalDateStr(d));
         d.setMonth(d.getMonth() + 1);
       }
     }

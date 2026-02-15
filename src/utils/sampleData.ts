@@ -1,4 +1,5 @@
 import { v4 as uuid } from 'uuid';
+import { toLocalDateStr } from './calculations';
 import {
   BodyEntry,
   MacroTargets,
@@ -18,7 +19,7 @@ import { DEFAULT_EXERCISES } from './defaultExercises';
 function dateStr(daysAgo: number): string {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().split('T')[0];
+  return toLocalDateStr(d);
 }
 
 function rand(min: number, max: number): number {

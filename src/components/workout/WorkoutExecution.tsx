@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession } from '../../types';
-import { estimateWorkoutCalories, estimateCardioCalories } from '../../utils/calculations';
+import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr } from '../../utils/calculations';
 import { ArrowLeft, Check, Plus, Trash2, Save } from 'lucide-react';
 
 interface WorkoutExecutionProps {
@@ -52,7 +52,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
     });
   });
 
-  const [sessionDate, setSessionDate] = useState(() => existingSession?.date || new Date().toISOString().split('T')[0]);
+  const [sessionDate, setSessionDate] = useState(() => existingSession?.date || toLocalDateStr(new Date()));
   const [startTime] = useState(() => existingSession?.startTime || new Date().toISOString());
   const [elapsed, setElapsed] = useState(0);
 
@@ -90,7 +90,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   // Initialize session if new (not for viewing completed sessions)
   useEffect(() => {
     if (!sessionId && template && !isViewingCompleted) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalDateStr(new Date());
       const id = addWorkoutSession({
         templateId,
         date: today,

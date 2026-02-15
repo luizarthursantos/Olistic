@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { AnalyticsChart, DateRangeOption } from '../../types';
 import { getMetricData, AVAILABLE_METRICS } from './analyticsMetrics';
-import { movingAverage } from '../../utils/calculations';
+import { movingAverage, toLocalDateStr } from '../../utils/calculations';
 import {
   ComposedChart,
   Line,
@@ -28,7 +28,7 @@ function getDateCutoff(range: DateRangeOption): string {
   const now = new Date();
   const months: Record<string, number> = { '1M': 1, '3M': 3, '6M': 6, '12M': 12, '24M': 24, '36M': 36 };
   now.setMonth(now.getMonth() - (months[range] || 1));
-  return now.toISOString().split('T')[0];
+  return toLocalDateStr(now);
 }
 
 export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }: AnalyticsChartViewProps) {
@@ -74,8 +74,8 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
     const allCalendarDates: string[] = [];
     const d = new Date(sortedDates[0] + 'T12:00:00');
     const endDate = sortedDates[sortedDates.length - 1];
-    while (d.toISOString().split('T')[0] <= endDate) {
-      allCalendarDates.push(d.toISOString().split('T')[0]);
+    while (toLocalDateStr(d) <= endDate) {
+      allCalendarDates.push(toLocalDateStr(d));
       d.setDate(d.getDate() + 1);
     }
 
@@ -153,16 +153,16 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
       // Weekly: find Sundays
       const d = new Date(first + 'T12:00:00');
       d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
-      while (d.toISOString().split('T')[0] <= last) {
-        ticks.push(d.toISOString().split('T')[0]);
+      while (toLocalDateStr(d) <= last) {
+        ticks.push(toLocalDateStr(d));
         d.setDate(d.getDate() + 7);
       }
     } else {
       // Monthly: 1st of each month
       const startD = new Date(first + 'T12:00:00');
       const d = new Date(startD.getFullYear(), startD.getMonth() + 1, 1, 12);
-      while (d.toISOString().split('T')[0] <= last) {
-        ticks.push(d.toISOString().split('T')[0]);
+      while (toLocalDateStr(d) <= last) {
+        ticks.push(toLocalDateStr(d));
         d.setMonth(d.getMonth() + 1);
       }
     }

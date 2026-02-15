@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { toLocalDateStr } from '../../utils/calculations';
 import './DateSelector.css';
 
 export function DateSelector() {
@@ -8,17 +9,17 @@ export function DateSelector() {
   const changeDate = (days: number) => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + days);
-    setSelectedDate(d.toISOString().split('T')[0]);
+    setSelectedDate(toLocalDateStr(d));
   };
 
   const formatDisplay = (dateStr: string) => {
     const d = new Date(dateStr + 'T12:00:00');
     const today = new Date();
     today.setHours(12, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = toLocalDateStr(today);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = toLocalDateStr(yesterday);
 
     if (dateStr === todayStr) return 'Today';
     if (dateStr === yesterdayStr) return 'Yesterday';

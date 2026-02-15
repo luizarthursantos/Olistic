@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { ActivityLevel, ACTIVITY_LABELS, UnitSystem, AiProvider } from '../../types';
 import { exportToXlsx, importFromXlsx } from '../../utils/xlsxIO';
+import { toLocalDateStr } from '../../utils/calculations';
 import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone } from 'lucide-react';
 import './SettingsPanel.css';
 
@@ -48,7 +49,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `olistic-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+    a.download = `olistic-export-${toLocalDateStr(new Date())}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
