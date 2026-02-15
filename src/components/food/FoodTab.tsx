@@ -240,7 +240,7 @@ export function FoodTab() {
                         {row.target > 0 && (
                           <span
                             className="macro-progress-remaining"
-                            style={{ color: over ? 'var(--danger)' : 'var(--success)' }}
+                            style={{ color: 'var(--text-muted)' }}
                           >
                             {' '}({over ? '+' : ''}{Math.round(remaining)} left)
                           </span>
@@ -252,7 +252,7 @@ export function FoodTab() {
                         className="macro-progress-fill"
                         style={{
                           width: `${pct}%`,
-                          background: over ? 'var(--danger)' : row.color,
+                          background: row.color,
                         }}
                       />
                     </div>
