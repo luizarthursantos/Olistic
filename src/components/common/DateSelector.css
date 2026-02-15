@@ -6,11 +6,17 @@
   margin-bottom: 20px;
 }
 
+.date-selector > button {
+  position: relative;
+  z-index: 1;
+}
+
 .date-display {
   position: relative;
   text-align: center;
   min-width: 160px;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .date-input-hidden {
