@@ -6,18 +6,20 @@ import './DateSelector.css';
 export function DateSelector() {
   const { selectedDate, setSelectedDate } = useStore();
 
+  const todayStr = toLocalDateStr(new Date());
+  const isToday = selectedDate >= todayStr;
+
   const changeDate = (days: number) => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + days);
-    setSelectedDate(toLocalDateStr(d));
+    const next = toLocalDateStr(d);
+    if (next > todayStr) return;
+    setSelectedDate(next);
   };
 
   const formatDisplay = (dateStr: string) => {
     const d = new Date(dateStr + 'T12:00:00');
-    const today = new Date();
-    today.setHours(12, 0, 0, 0);
-    const todayStr = toLocalDateStr(today);
-    const yesterday = new Date(today);
+    const yesterday = new Date(todayStr + 'T12:00:00');
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = toLocalDateStr(yesterday);
 
@@ -36,12 +38,13 @@ export function DateSelector() {
           type="date"
           className="date-input-hidden"
           value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
+          max={todayStr}
+          onChange={(e) => { if (e.target.value <= todayStr) setSelectedDate(e.target.value); }}
         />
         <span className="date-label">{formatDisplay(selectedDate)}</span>
         <span className="date-full">{selectedDate}</span>
       </div>
-      <button className="btn btn-icon btn-secondary" onClick={() => changeDate(1)}>
+      <button className="btn btn-icon btn-secondary" onClick={() => changeDate(1)} disabled={isToday}>
         <ChevronRight size={18} />
       </button>
     </div>
