@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2, Save, Play } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil } from 'lucide-react';
 
 interface WorkoutExecutionProps {
   templateId: string;
@@ -57,6 +57,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   const [sessionDate, setSessionDate] = useState(() => existingSession?.date || toLocalDateStr(new Date()));
   const [startTime] = useState(() => existingSession?.startTime || new Date().toISOString());
   const [elapsed, setElapsed] = useState(0);
+  const [editSets, setEditSets] = useState(false);
 
   // Compute static duration for completed sessions
   const completedDuration = useMemo(() => {
@@ -240,6 +241,14 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
           <ArrowLeft size={14} /> Back
         </button>
         <h2 className="workout-exec-title">{template.name}</h2>
+        {!preview && !isViewingCompleted && (
+          <button
+            className={`btn btn-sm ${editSets ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setEditSets(!editSets)}
+          >
+            <Pencil size={14} />
+          </button>
+        )}
         {!preview && (
           <span className="workout-exec-timer">
             {isViewingCompleted
@@ -344,7 +353,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
                 );
               })}
 
-              {!preview && (
+              {!preview && editSets && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <button className="btn btn-secondary btn-sm" onClick={() => addSet(exIdx)}>
                     <Plus size={12} /> Add Set
