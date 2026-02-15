@@ -52,6 +52,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
     });
   });
 
+  const [sessionDate, setSessionDate] = useState(() => existingSession?.date || new Date().toISOString().split('T')[0]);
   const [startTime] = useState(() => existingSession?.startTime || new Date().toISOString());
   const [elapsed, setElapsed] = useState(0);
 
@@ -192,6 +193,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   const saveEdits = () => {
     if (!sessionId) return;
     updateWorkoutSession(sessionId, {
+      date: sessionDate,
       exercises: exerciseSessions,
       estimatedCalories: calcTotalCalories(),
     });
@@ -244,7 +246,20 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
       </div>
       {isViewingCompleted && existingSession && (
         <div className="workout-completed-badge">
-          {existingSession.date} · {existingSession.estimatedCalories} kcal
+          <input
+            type="date"
+            value={sessionDate}
+            onChange={(e) => setSessionDate(e.target.value)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'inherit',
+              font: 'inherit',
+              padding: 0,
+              cursor: 'pointer',
+            }}
+          />
+           · {existingSession.estimatedCalories} kcal
         </div>
       )}
 
