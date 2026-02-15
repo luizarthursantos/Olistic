@@ -27,6 +27,7 @@ export function WorkoutTab() {
   const [startTemplateId, setStartTemplateId] = useState<string | null>(null);
   const [editModeTemplates, setEditModeTemplates] = useState(false);
   const [editModeHistory, setEditModeHistory] = useState(false);
+  const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'template' | 'session'; id: string } | null>(null);
 
   const sortedSessions = useMemo(() => {
@@ -59,6 +60,22 @@ export function WorkoutTab() {
     }
     setDeleteConfirm(null);
   };
+
+  // If previewing a workout template
+  if (previewTemplateId) {
+    return (
+      <WorkoutExecution
+        templateId={previewTemplateId}
+        preview
+        onFinish={() => setPreviewTemplateId(null)}
+        onStart={() => {
+          const id = previewTemplateId;
+          setPreviewTemplateId(null);
+          startWorkout(id);
+        }}
+      />
+    );
+  }
 
   // If executing a workout
   if (startTemplateId) {
@@ -143,13 +160,24 @@ export function WorkoutTab() {
                       className="workout-template-color"
                       style={{ background: template.color }}
                     />
-                    <div className="workout-template-info">
+                    <div
+                      className="workout-template-info"
+                      onClick={() => setPreviewTemplateId(template.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <h4>{template.name}</h4>
                       <p className="text-sm text-muted">
                         {template.exercises.length} exercises
                       </p>
                     </div>
                     <div className="workout-template-actions">
+                      <button
+                        className="btn btn-icon btn-secondary btn-sm"
+                        onClick={() => setPreviewTemplateId(template.id)}
+                        title="View"
+                      >
+                        <Eye size={14} />
+                      </button>
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={() => startWorkout(template.id)}

@@ -2,15 +2,17 @@ import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2, Save } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, Save, Play } from 'lucide-react';
 
 interface WorkoutExecutionProps {
   templateId: string;
   existingSessionId?: string;
+  preview?: boolean;
   onFinish: () => void;
+  onStart?: () => void;
 }
 
-export function WorkoutExecution({ templateId, existingSessionId, onFinish }: WorkoutExecutionProps) {
+export function WorkoutExecution({ templateId, existingSessionId, preview, onFinish, onStart }: WorkoutExecutionProps) {
   const {
     workoutTemplates,
     workoutSessions,
@@ -67,12 +69,12 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   }, [isViewingCompleted, existingSession]);
 
   useEffect(() => {
-    if (isViewingCompleted) return; // Don't run timer for completed sessions
+    if (isViewingCompleted || preview) return;
     const interval = setInterval(() => {
       setElapsed(Math.floor((Date.now() - new Date(startTime).getTime()) / 1000));
     }, 1000);
     return () => clearInterval(interval);
-  }, [startTime, isViewingCompleted]);
+  }, [startTime, isViewingCompleted, preview]);
 
   // Get previous session for this template
   const previousSession = useMemo(() => {
@@ -87,9 +89,9 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
     return sorted[0]?.weightKg || 75;
   }, [bodyEntries]);
 
-  // Initialize session if new (not for viewing completed sessions)
+  // Initialize session if new (not for viewing completed sessions or preview)
   useEffect(() => {
-    if (!sessionId && template && !isViewingCompleted) {
+    if (!sessionId && template && !isViewingCompleted && !preview) {
       const today = toLocalDateStr(new Date());
       const id = addWorkoutSession({
         templateId,
@@ -234,15 +236,17 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   return (
     <div className="workout-execution fade-in">
       <div className="workout-exec-header">
-        <button className="btn btn-secondary btn-sm" onClick={isViewingCompleted ? onFinish : saveProgress}>
+        <button className="btn btn-secondary btn-sm" onClick={preview || isViewingCompleted ? onFinish : saveProgress}>
           <ArrowLeft size={14} /> Back
         </button>
         <h2 className="workout-exec-title">{template.name}</h2>
-        <span className="workout-exec-timer">
-          {isViewingCompleted
-            ? formatTime(completedDuration)
-            : formatTime(elapsed)}
-        </span>
+        {!preview && (
+          <span className="workout-exec-timer">
+            {isViewingCompleted
+              ? formatTime(completedDuration)
+              : formatTime(elapsed)}
+          </span>
+        )}
       </div>
       {isViewingCompleted && existingSession && (
         <div className="workout-completed-badge">
@@ -285,6 +289,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
                 value={exSession.cardioMinutes || 0}
                 onChange={(e) => updateCardioMinutes(exIdx, Number(e.target.value))}
                 min={0}
+                readOnly={preview}
               />
               {exSession.estimatedCalories ? (
                 <span className="text-sm text-muted">~{exSession.estimatedCalories} kcal</span>
@@ -316,6 +321,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
                       value={set.reps}
                       onChange={(e) => updateSet(exIdx, setIdx, { reps: Number(e.target.value) })}
                       min={0}
+                      readOnly={preview}
                     />
                     <input
                       type="number"
@@ -324,36 +330,49 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
                       onChange={(e) => updateSet(exIdx, setIdx, { loadKg: Number(e.target.value) })}
                       min={0}
                       step={0.5}
+                      readOnly={preview}
                     />
-                    <button
-                      className={`set-check ${set.completed ? 'done' : ''}`}
-                      onClick={() => toggleSetComplete(exIdx, setIdx)}
-                    >
-                      {set.completed ? '✓' : ''}
-                    </button>
+                    {!preview && (
+                      <button
+                        className={`set-check ${set.completed ? 'done' : ''}`}
+                        onClick={() => toggleSetComplete(exIdx, setIdx)}
+                      >
+                        {set.completed ? '✓' : ''}
+                      </button>
+                    )}
                   </div>
                 );
               })}
 
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => addSet(exIdx)}>
-                  <Plus size={12} /> Add Set
-                </button>
-                {exSession.sets.length > 1 && (
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => removeSet(exIdx, exSession.sets.length - 1)}
-                  >
-                    <Trash2 size={12} /> Remove
+              {!preview && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => addSet(exIdx)}>
+                    <Plus size={12} /> Add Set
                   </button>
-                )}
-              </div>
+                  {exSession.sets.length > 1 && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => removeSet(exIdx, exSession.sets.length - 1)}
+                    >
+                      <Trash2 size={12} /> Remove
+                    </button>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
       ))}
 
-      {isViewingCompleted ? (
+      {preview ? (
+        <button
+          className="btn btn-primary"
+          style={{ width: '100%', marginTop: 16, padding: 14, fontSize: 16 }}
+          onClick={() => onStart?.()}
+        >
+          <Play size={18} /> Start Workout
+        </button>
+      ) : isViewingCompleted ? (
         <button
           className="btn btn-primary"
           style={{ width: '100%', marginTop: 16, padding: 14, fontSize: 16 }}
