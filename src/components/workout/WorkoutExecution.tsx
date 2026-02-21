@@ -387,11 +387,12 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
                 );
               })}
 
+              {editMode && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button className="btn btn-secondary btn-sm" onClick={() => addSet(exIdx)}>
                   <Plus size={12} /> Add Set
                 </button>
-                {editMode && exSession.sets.length > 1 && (
+                {exSession.sets.length > 1 && (
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={() => removeSet(exIdx, exSession.sets.length - 1)}
@@ -400,6 +401,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
                   </button>
                 )}
               </div>
+              )}
             </>
           )}
         </div>
