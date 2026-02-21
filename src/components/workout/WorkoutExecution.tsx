@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2, Save } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, Save, TrendingUp } from 'lucide-react';
+import { WorkoutExerciseAnalytics } from './WorkoutExerciseAnalytics';
 
 interface WorkoutExecutionProps {
   templateId: string;
@@ -52,6 +53,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
     });
   });
 
+  const [analyticsExerciseId, setAnalyticsExerciseId] = useState<string | null>(null);
   const [sessionDate, setSessionDate] = useState(() => existingSession?.date || new Date().toISOString().split('T')[0]);
   const [startTime] = useState(() => existingSession?.startTime || new Date().toISOString());
   const [elapsed, setElapsed] = useState(0);
@@ -266,8 +268,13 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
       {exerciseSessions.map((exSession, exIdx) => (
         <div key={exIdx} className="exercise-card">
           <div className="exercise-card-header">
-            <span className="exercise-card-name">
+            <span
+              className="exercise-card-name"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setAnalyticsExerciseId(exSession.exerciseId)}
+            >
               {getExerciseIcon(exSession.exerciseId)} {getExerciseName(exSession.exerciseId)}
+              <TrendingUp size={13} style={{ color: 'var(--text-muted)' }} />
             </span>
           </div>
 
@@ -369,6 +376,13 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
         >
           <Check size={18} /> Finish Workout
         </button>
+      )}
+
+      {analyticsExerciseId && (
+        <WorkoutExerciseAnalytics
+          initialExerciseId={analyticsExerciseId}
+          onClose={() => setAnalyticsExerciseId(null)}
+        />
       )}
     </div>
   );

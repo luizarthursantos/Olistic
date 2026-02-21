@@ -11,9 +11,14 @@ import {
   CartesianGrid,
 } from 'recharts';
 
-export function WorkoutExerciseAnalytics() {
+interface WorkoutExerciseAnalyticsProps {
+  initialExerciseId?: string;
+  onClose?: () => void;
+}
+
+export function WorkoutExerciseAnalytics({ initialExerciseId, onClose }: WorkoutExerciseAnalyticsProps = {}) {
   const { exercises, workoutSessions, workoutTemplates } = useStore();
-  const [selectedExerciseId, setSelectedExerciseId] = useState('');
+  const [selectedExerciseId, setSelectedExerciseId] = useState(initialExerciseId || '');
 
   // Only show exercises that have been used in at least one completed session
   const usedExercises = useMemo(() => {
@@ -136,24 +141,26 @@ export function WorkoutExerciseAnalytics() {
 
   const reversedLogs = useMemo(() => [...exerciseLogs].reverse(), [exerciseLogs]);
 
-  return (
+  const content = (
     <div>
-      {/* Exercise Selector */}
-      <div className="form-group" style={{ marginBottom: 16 }}>
-        <label className="label">Exercise</label>
-        <select
-          className="select"
-          value={selectedExerciseId}
-          onChange={(e) => setSelectedExerciseId(e.target.value)}
-        >
-          <option value="">Select an exercise...</option>
-          {usedExercises.map((ex) => (
-            <option key={ex.id} value={ex.id}>
-              {ex.icon} {ex.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Exercise Selector - hide when opened for a specific exercise */}
+      {!initialExerciseId && (
+        <div className="form-group" style={{ marginBottom: 16 }}>
+          <label className="label">Exercise</label>
+          <select
+            className="select"
+            value={selectedExerciseId}
+            onChange={(e) => setSelectedExerciseId(e.target.value)}
+          >
+            <option value="">Select an exercise...</option>
+            {usedExercises.map((ex) => (
+              <option key={ex.id} value={ex.id}>
+                {ex.icon} {ex.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {!selectedExerciseId && (
         <div className="empty-state" style={{ padding: '30px 20px' }}>
@@ -260,4 +267,22 @@ export function WorkoutExerciseAnalytics() {
       )}
     </div>
   );
+
+  if (onClose) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal modal-lg" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '85vh', overflowY: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 className="modal-title" style={{ margin: 0 }}>
+              {exercise?.icon} {exercise?.name} — Analytics
+            </h3>
+            <button className="btn btn-icon btn-secondary" onClick={onClose}>✕</button>
+          </div>
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return content;
 }

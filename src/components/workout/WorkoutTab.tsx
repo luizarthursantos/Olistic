@@ -28,6 +28,7 @@ export function WorkoutTab() {
   const [editModeTemplates, setEditModeTemplates] = useState(false);
   const [editModeHistory, setEditModeHistory] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'template' | 'session'; id: string } | null>(null);
+  const [viewTemplateId, setViewTemplateId] = useState<string | null>(null);
 
   const sortedSessions = useMemo(() => {
     return [...workoutSessions].sort((a, b) => b.date.localeCompare(a.date));
@@ -79,6 +80,56 @@ export function WorkoutTab() {
           existingSessionId={session.id}
           onFinish={() => setActiveSession(null)}
         />
+      );
+    }
+  }
+
+  // View template preview
+  if (viewTemplateId) {
+    const tpl = workoutTemplates.find((t) => t.id === viewTemplateId);
+    if (tpl) {
+      return (
+        <div className="workout-tab fade-in">
+          <div className="workout-exec-header">
+            <button className="btn btn-secondary btn-sm" onClick={() => setViewTemplateId(null)}>
+              <Eye size={14} /> Back
+            </button>
+            <h2 className="workout-exec-title">{tpl.name}</h2>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => { setViewTemplateId(null); startWorkout(tpl.id); }}
+            >
+              <Play size={14} /> Start
+            </button>
+          </div>
+          {tpl.exercises.map((ex, i) => {
+            const exercise = exercises.find((e) => e.id === ex.exerciseId);
+            const isCardioEx = exercise?.isCardio || false;
+            return (
+              <div key={i} className="exercise-card" style={{ marginBottom: 8 }}>
+                <div className="exercise-card-header">
+                  <span className="exercise-card-name">
+                    {exercise?.icon || '🏋️'} {exercise?.name || 'Unknown'}
+                  </span>
+                  <span className="text-sm text-muted">
+                    {isCardioEx
+                      ? `${ex.defaultReps} min`
+                      : `${ex.sets} × ${ex.defaultReps}${ex.defaultLoadKg > 0 ? ` @ ${ex.defaultLoadKg}kg` : ''}`
+                    }
+                  </span>
+                </div>
+                {ex.notes && (
+                  <div className="exercise-note">{ex.notes}</div>
+                )}
+              </div>
+            );
+          })}
+          {tpl.exercises.length === 0 && (
+            <p className="text-muted text-sm" style={{ textAlign: 'center', padding: 20 }}>
+              No exercises in this workout
+            </p>
+          )}
+        </div>
       );
     }
   }
@@ -150,6 +201,13 @@ export function WorkoutTab() {
                       </p>
                     </div>
                     <div className="workout-template-actions">
+                      <button
+                        className="btn btn-icon btn-secondary btn-sm"
+                        onClick={() => setViewTemplateId(template.id)}
+                        title="View"
+                      >
+                        <Eye size={14} />
+                      </button>
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={() => startWorkout(template.id)}
