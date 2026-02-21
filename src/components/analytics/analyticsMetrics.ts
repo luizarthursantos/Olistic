@@ -212,21 +212,23 @@ export function getMetricData(
       });
 
     case 'caloric_balance': {
-      // Only include dates where meals were actually logged, otherwise
-      // consumed=0 produces a misleading large negative balance.
-      const mealDates = new Set(mealEntries.map((m) => m.date));
-      return entries.filter((e) => resolve(e, 'weightKg') > 0 && mealDates.has(e.date)).map((e) => {
-        const bmr = calcBMR(settings.sex, resolve(e, 'weightKg'), n(settings.heightCm), age);
-        const tdee = calcTDEE(bmr, e.activityLevel);
+      // Iterate over meal dates, interpolate body data for TDEE
+      const mealByDate: Record<string, number> = {};
+      mealEntries.forEach((m) => { mealByDate[m.date] = (mealByDate[m.date] || 0) + n(m.calories); });
+
+      return Object.entries(mealByDate).map(([date, consumed]) => {
+        const weight = interpolate(date, 'weightKg');
+        if (weight <= 0) return null;
+        const bmr = calcBMR(settings.sex, weight, n(settings.heightCm), age);
+        // Use nearest body entry's activity level, fallback to global setting
+        const nearest = sorted.filter((e) => e.date <= date).pop() || sorted.find((e) => e.date >= date);
+        const actLevel = nearest?.activityLevel || settings.activityLevel;
+        const tdee = calcTDEE(bmr, actLevel);
         const workoutCal = workoutSessions
-          .filter((s) => s.date === e.date && s.completed)
+          .filter((s) => s.date === date && s.completed)
           .reduce((sum, s) => sum + n(s.estimatedCalories), 0);
-        const totalExpenditure = tdee + workoutCal;
-        const consumed = mealEntries
-          .filter((m) => m.date === e.date)
-          .reduce((sum, m) => sum + n(m.calories), 0);
-        return { date: e.date, value: consumed - totalExpenditure };
-      });
+        return { date, value: consumed - tdee - workoutCal };
+      }).filter((d): d is { date: string; value: number } => d !== null);
     }
 
     case 'food_calories': {
