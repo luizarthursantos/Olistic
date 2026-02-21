@@ -209,10 +209,11 @@ export function WorkoutTab() {
                         <Eye size={14} />
                       </button>
                       <button
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-icon btn-primary btn-sm"
                         onClick={() => startWorkout(template.id)}
+                        title="Start"
                       >
-                        <Play size={14} /> Start
+                        <Play size={14} />
                       </button>
                       {editModeTemplates && (
                         <>
