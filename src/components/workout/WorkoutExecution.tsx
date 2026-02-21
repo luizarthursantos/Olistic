@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2, Save, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, Save, TrendingUp, X } from 'lucide-react';
 import { WorkoutExerciseAnalytics } from './WorkoutExerciseAnalytics';
 
 interface WorkoutExecutionProps {
@@ -54,6 +54,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   });
 
   const [analyticsExerciseId, setAnalyticsExerciseId] = useState<string | null>(null);
+  const [showAddExercise, setShowAddExercise] = useState(false);
   const [sessionDate, setSessionDate] = useState(() => existingSession?.date || new Date().toISOString().split('T')[0]);
   const [startTime] = useState(() => existingSession?.startTime || new Date().toISOString());
   const [elapsed, setElapsed] = useState(0);
@@ -159,6 +160,19 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
       };
       return updated;
     });
+  };
+
+  const addExerciseToSession = (exerciseId: string) => {
+    const exercise = exercises.find((e) => e.id === exerciseId);
+    const newSession: WorkoutExerciseSession = exercise?.isCardio
+      ? { exerciseId, sets: [], cardioMinutes: 0, estimatedCalories: 0 }
+      : { exerciseId, sets: [{ reps: 10, loadKg: 0, completed: false }, { reps: 10, loadKg: 0, completed: false }, { reps: 10, loadKg: 0, completed: false }] };
+    setExerciseSessions((prev) => [...prev, newSession]);
+    setShowAddExercise(false);
+  };
+
+  const removeExerciseFromSession = (exIndex: number) => {
+    setExerciseSessions((prev) => prev.filter((_, i) => i !== exIndex));
   };
 
   const updateCardioMinutes = (exIndex: number, minutes: number) => {
@@ -288,6 +302,13 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
               {getExerciseIcon(exSession.exerciseId)} {getExerciseName(exSession.exerciseId)}
               <TrendingUp size={13} style={{ color: 'var(--text-muted)' }} />
             </span>
+            <button
+              className="btn btn-icon btn-danger btn-sm"
+              onClick={() => removeExerciseFromSession(exIdx)}
+              title="Remove exercise"
+            >
+              <Trash2 size={13} />
+            </button>
           </div>
 
           {templateNotes[exSession.exerciseId] && (
@@ -372,6 +393,14 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
         </div>
       ))}
 
+      <button
+        className="btn btn-secondary"
+        style={{ width: '100%', marginTop: 8, marginBottom: 8 }}
+        onClick={() => setShowAddExercise(true)}
+      >
+        <Plus size={16} /> Add Exercise
+      </button>
+
       {isViewingCompleted ? (
         <button
           className="btn btn-primary"
@@ -395,6 +424,46 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
           initialExerciseId={analyticsExerciseId}
           onClose={() => setAnalyticsExerciseId(null)}
         />
+      )}
+
+      {showAddExercise && (
+        <div className="modal-overlay" onClick={() => setShowAddExercise(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 className="modal-title" style={{ margin: 0 }}>Add Exercise</h3>
+              <button className="btn btn-icon btn-secondary" onClick={() => setShowAddExercise(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+              {exercises.map((exercise) => (
+                <button
+                  key={exercise.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontFamily: 'inherit',
+                    textAlign: 'left',
+                  }}
+                  onClick={() => addExerciseToSession(exercise.id)}
+                >
+                  <span>{exercise.icon}</span>
+                  <span style={{ flex: 1 }}>{exercise.name}</span>
+                  {exercise.isCardio && <span className="badge badge-success">Cardio</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
