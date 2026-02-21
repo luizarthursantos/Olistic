@@ -76,12 +76,26 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
     return () => clearInterval(interval);
   }, [startTime, isViewingCompleted]);
 
-  // Get previous session for this template
-  const previousSession = useMemo(() => {
-    return [...workoutSessions]
-      .filter((s) => s.templateId === templateId && s.completed && s.id !== existingSessionId)
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
-  }, [workoutSessions, templateId]);
+  // Get previous sets for each exercise (from any workout, not just same template)
+  const previousSetsByExercise = useMemo(() => {
+    const result: Record<string, WorkoutSet[]> = {};
+    const sorted = [...workoutSessions]
+      .filter((s) => s.completed && s.id !== existingSessionId)
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    exerciseSessions.forEach((exSession) => {
+      if (result[exSession.exerciseId]) return;
+      for (const s of sorted) {
+        const prev = s.exercises.find((e) => e.exerciseId === exSession.exerciseId);
+        const completedSets = prev?.sets.filter((set) => set.completed);
+        if (completedSets && completedSets.length > 0) {
+          result[exSession.exerciseId] = completedSets;
+          break;
+        }
+      }
+    });
+    return result;
+  }, [workoutSessions, existingSessionId, exerciseSessions]);
 
   // Get the latest body weight
   const latestWeight = useMemo(() => {
@@ -221,9 +235,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   const isCardio = (id: string) => exercises.find((e) => e.id === id)?.isCardio || false;
 
   const getPreviousSets = (exerciseId: string): WorkoutSet[] => {
-    if (!previousSession) return [];
-    const prevEx = previousSession.exercises.find((e) => e.exerciseId === exerciseId);
-    return prevEx?.sets || [];
+    return previousSetsByExercise[exerciseId] || [];
   };
 
   if (!template) return <p>Template not found</p>;
