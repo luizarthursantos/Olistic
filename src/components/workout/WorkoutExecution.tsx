@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2, Save, TrendingUp, X } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, Save, TrendingUp, X, Pencil } from 'lucide-react';
 import { WorkoutExerciseAnalytics } from './WorkoutExerciseAnalytics';
 
 interface WorkoutExecutionProps {
@@ -55,6 +55,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
 
   const [analyticsExerciseId, setAnalyticsExerciseId] = useState<string | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [sessionDate, setSessionDate] = useState(() => existingSession?.date || new Date().toISOString().split('T')[0]);
   const [startTime] = useState(() => existingSession?.startTime || new Date().toISOString());
   const [elapsed, setElapsed] = useState(0);
@@ -266,11 +267,20 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
           <ArrowLeft size={14} /> Back
         </button>
         <h2 className="workout-exec-title">{template.name}</h2>
-        <span className="workout-exec-timer">
-          {isViewingCompleted
-            ? formatTime(completedDuration)
-            : formatTime(elapsed)}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="workout-exec-timer">
+            {isViewingCompleted
+              ? formatTime(completedDuration)
+              : formatTime(elapsed)}
+          </span>
+          <button
+            className={`btn btn-icon btn-sm ${editMode ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setEditMode(!editMode)}
+            title="Edit exercises"
+          >
+            <Pencil size={14} />
+          </button>
+        </div>
       </div>
       {isViewingCompleted && existingSession && (
         <div className="workout-completed-badge">
@@ -302,13 +312,15 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
               {getExerciseIcon(exSession.exerciseId)} {getExerciseName(exSession.exerciseId)}
               <TrendingUp size={13} style={{ color: 'var(--text-muted)' }} />
             </span>
-            <button
-              className="btn btn-icon btn-danger btn-sm"
-              onClick={() => removeExerciseFromSession(exIdx)}
-              title="Remove exercise"
-            >
-              <Trash2 size={13} />
-            </button>
+            {editMode && (
+              <button
+                className="btn btn-icon btn-danger btn-sm"
+                onClick={() => removeExerciseFromSession(exIdx)}
+                title="Remove exercise"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
 
           {templateNotes[exSession.exerciseId] && (
@@ -379,7 +391,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
                 <button className="btn btn-secondary btn-sm" onClick={() => addSet(exIdx)}>
                   <Plus size={12} /> Add Set
                 </button>
-                {exSession.sets.length > 1 && (
+                {editMode && exSession.sets.length > 1 && (
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={() => removeSet(exIdx, exSession.sets.length - 1)}
@@ -393,13 +405,15 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
         </div>
       ))}
 
-      <button
-        className="btn btn-secondary"
-        style={{ width: '100%', marginTop: 8, marginBottom: 8 }}
-        onClick={() => setShowAddExercise(true)}
-      >
-        <Plus size={16} /> Add Exercise
-      </button>
+      {editMode && (
+        <button
+          className="btn btn-secondary"
+          style={{ width: '100%', marginTop: 8, marginBottom: 8 }}
+          onClick={() => setShowAddExercise(true)}
+        >
+          <Plus size={16} /> Add Exercise
+        </button>
+      )}
 
       {isViewingCompleted ? (
         <button
