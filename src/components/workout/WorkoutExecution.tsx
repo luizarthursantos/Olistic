@@ -121,6 +121,13 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
     }
   }, []);
 
+  // Auto-save exercises to store whenever they change
+  useEffect(() => {
+    if (sessionId && !isViewingCompleted) {
+      updateWorkoutSession(sessionId, { exercises: exerciseSessions });
+    }
+  }, [exerciseSessions, sessionId]);
+
   const updateSet = (exIndex: number, setIndex: number, partial: Partial<WorkoutSet>) => {
     setExerciseSessions((prev) => {
       const updated = [...prev];
