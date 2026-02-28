@@ -32,6 +32,21 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   const [exerciseSessions, setExerciseSessions] = useState<WorkoutExerciseSession[]>(() => {
     if (existingSession) return existingSession.exercises;
     if (!template) return [];
+
+    // Find last completed sets for each exercise (from any workout)
+    const sortedSessions = [...workoutSessions]
+      .filter((s) => s.completed)
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    const getLastSets = (exerciseId: string): WorkoutSet[] | null => {
+      for (const s of sortedSessions) {
+        const prev = s.exercises.find((e) => e.exerciseId === exerciseId);
+        const completed = prev?.sets.filter((set) => set.completed);
+        if (completed && completed.length > 0) return completed;
+      }
+      return null;
+    };
+
     return template.exercises.map((ex) => {
       const exercise = exercises.find((e) => e.id === ex.exerciseId);
       if (exercise?.isCardio) {
@@ -40,6 +55,17 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
           sets: [],
           cardioMinutes: ex.defaultReps,
           estimatedCalories: 0,
+        };
+      }
+      const lastSets = getLastSets(ex.exerciseId);
+      if (lastSets) {
+        // Use last session's reps/weights, match template set count
+        return {
+          exerciseId: ex.exerciseId,
+          sets: Array.from({ length: ex.sets }, (_, i) => {
+            const prev = lastSets[i] || lastSets[lastSets.length - 1];
+            return { reps: prev.reps, loadKg: prev.loadKg, completed: false };
+          }),
         };
       }
       return {
