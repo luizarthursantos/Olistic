@@ -219,23 +219,10 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
     });
   };
 
-  const updateExerciseCalories = (exIndex: number, calories: number) => {
-    setExerciseSessions((prev) => {
-      const updated = [...prev];
-      updated[exIndex] = { ...updated[exIndex], estimatedCalories: calories };
-      return updated;
-    });
-  };
-
   const calcTotalCalories = () => {
-    // If any exercise has manually set calories, sum per-exercise calories
-    const hasPerExerciseCalories = exerciseSessions.some((ex) => (ex.estimatedCalories ?? 0) > 0);
-    if (hasPerExerciseCalories) {
-      return exerciseSessions.reduce((sum, ex) => sum + (ex.estimatedCalories ?? 0), 0);
-    }
-
-    // Fallback: auto-calculate from duration (legacy behavior)
     let totalCalories = 0;
+
+    // Sum explicit cardio calories
     let totalCardioMinutes = 0;
     exerciseSessions.forEach((exSession) => {
       const exercise = exercises.find((e) => e.id === exSession.exerciseId);
@@ -245,6 +232,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
       }
     });
 
+    // Use actual elapsed time for weightlifting (total duration minus cardio)
     const durationSeconds = isViewingCompleted ? completedDuration : elapsed;
     const elapsedMinutes = durationSeconds / 60;
     const weightliftingMinutes = Math.max(0, elapsedMinutes - totalCardioMinutes);
@@ -342,7 +330,7 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
               cursor: 'pointer',
             }}
           />
-           · {calcTotalCalories()} kcal
+           · {existingSession.estimatedCalories} kcal
         </div>
       )}
 
@@ -383,15 +371,9 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
                 onChange={(e) => updateCardioMinutes(exIdx, Number(e.target.value))}
                 min={0}
               />
-              <span className="cardio-label">kcal:</span>
-              <input
-                type="number"
-                className="set-input"
-                style={{ width: 80 }}
-                value={exSession.estimatedCalories || 0}
-                onChange={(e) => updateExerciseCalories(exIdx, Number(e.target.value))}
-                min={0}
-              />
+              {exSession.estimatedCalories ? (
+                <span className="text-sm text-muted">~{exSession.estimatedCalories} kcal</span>
+              ) : null}
             </div>
           ) : (
             <>
@@ -437,18 +419,6 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
                   </div>
                 );
               })}
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>kcal:</span>
-                <input
-                  type="number"
-                  className="set-input"
-                  style={{ width: 80 }}
-                  value={exSession.estimatedCalories || 0}
-                  onChange={(e) => updateExerciseCalories(exIdx, Number(e.target.value))}
-                  min={0}
-                />
-              </div>
 
               {editMode && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
