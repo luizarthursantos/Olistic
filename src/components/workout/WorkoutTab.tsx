@@ -17,6 +17,7 @@ export function WorkoutTab() {
     workoutSessions,
     deleteWorkoutTemplate,
     deleteWorkoutSession,
+    updateWorkoutSession,
     exercises,
   } = useStore();
 
@@ -280,7 +281,20 @@ export function WorkoutTab() {
                           </td>
                           <td style={{ fontWeight: 500 }}>{getTemplateName(session.templateId)}</td>
                           <td>{session.date.slice(8,10)}-{session.date.slice(5,7)}-{session.date.slice(2,4)}</td>
-                          <td>{session.estimatedCalories > 0 ? session.estimatedCalories : '-'}</td>
+                          <td>
+                            <input
+                              type="number"
+                              className="set-input"
+                              style={{ width: 70, textAlign: 'center' }}
+                              value={session.estimatedCalories || 0}
+                              onChange={(e) =>
+                                updateWorkoutSession(session.id, {
+                                  estimatedCalories: Math.max(0, Number(e.target.value)),
+                                })
+                              }
+                              min={0}
+                            />
+                          </td>
                           <td>
                             <span className={`badge ${session.completed ? 'badge-success' : 'badge-warning'}`}>
                               {session.completed ? 'Done' : 'In Progress'}
