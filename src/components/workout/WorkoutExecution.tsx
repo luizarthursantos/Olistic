@@ -86,15 +86,15 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
   const [startTime] = useState(() => existingSession?.startTime || new Date().toISOString());
   const [elapsed, setElapsed] = useState(0);
 
-  // Compute static duration for completed sessions
-  const completedDuration = useMemo(() => {
+  // Editable duration for completed sessions (in seconds)
+  const [completedDuration, setCompletedDuration] = useState(() => {
     if (isViewingCompleted && existingSession?.startTime && existingSession?.endTime) {
       return Math.floor(
         (new Date(existingSession.endTime).getTime() - new Date(existingSession.startTime).getTime()) / 1000
       );
     }
     return 0;
-  }, [isViewingCompleted, existingSession]);
+  });
 
   useEffect(() => {
     if (isViewingCompleted) return; // Don't run timer for completed sessions
@@ -256,8 +256,10 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
 
   const saveEdits = () => {
     if (!sessionId) return;
+    const newEndTime = new Date(new Date(startTime).getTime() + completedDuration * 1000).toISOString();
     updateWorkoutSession(sessionId, {
       date: sessionDate,
+      endTime: newEndTime,
       exercises: exerciseSessions,
       estimatedCalories: calcTotalCalories(),
     });
@@ -301,11 +303,38 @@ export function WorkoutExecution({ templateId, existingSessionId, onFinish }: Wo
         </button>
         <h2 className="workout-exec-title">{template.name}</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="workout-exec-timer">
-            {isViewingCompleted
-              ? formatTime(completedDuration)
-              : formatTime(elapsed)}
-          </span>
+          {isViewingCompleted ? (
+            <span className="workout-exec-timer" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <input
+                type="number"
+                value={Math.floor(completedDuration / 3600)}
+                onChange={(e) => {
+                  const h = Math.max(0, Number(e.target.value));
+                  const m = Math.floor((completedDuration % 3600) / 60);
+                  setCompletedDuration(h * 3600 + m * 60);
+                }}
+                min={0}
+                style={{ width: 28, background: 'transparent', border: 'none', color: 'inherit', font: 'inherit', textAlign: 'right', padding: 0 }}
+              />
+              :
+              <input
+                type="number"
+                value={Math.floor((completedDuration % 3600) / 60)}
+                onChange={(e) => {
+                  const h = Math.floor(completedDuration / 3600);
+                  const m = Math.min(59, Math.max(0, Number(e.target.value)));
+                  setCompletedDuration(h * 3600 + m * 60);
+                }}
+                min={0}
+                max={59}
+                style={{ width: 28, background: 'transparent', border: 'none', color: 'inherit', font: 'inherit', textAlign: 'left', padding: 0 }}
+              />
+            </span>
+          ) : (
+            <span className="workout-exec-timer">
+              {formatTime(elapsed)}
+            </span>
+          )}
           <button
             className={`btn btn-icon btn-sm ${editMode ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setEditMode(!editMode)}
