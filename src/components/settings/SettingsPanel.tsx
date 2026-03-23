@@ -3,7 +3,8 @@ import { useStore } from '../../store/useStore';
 import { ActivityLevel, ACTIVITY_LABELS, UnitSystem, AiProvider } from '../../types';
 import { exportToXlsx, importFromXlsx } from '../../utils/xlsxIO';
 import { toLocalDateStr } from '../../utils/calculations';
-import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone } from 'lucide-react';
+import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone, FileText } from 'lucide-react';
+import { export1rmPdf } from '../../utils/export1rmPdf';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -11,7 +12,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
-  const { settings, updateSettings, loadSampleData } = useStore();
+  const { settings, updateSettings, loadSampleData, exercises, workoutSessions, workoutTemplates } = useStore();
   const [importStatus, setImportStatus] = useState<string>('');
   const [canInstall, setCanInstall] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -303,6 +304,17 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             </button>
             <button className="btn btn-secondary" onClick={handleImportXlsx}>
               <Upload size={16} /> Import XLSX
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                const result = export1rmPdf(exercises, workoutSessions, workoutTemplates);
+                if (!result) {
+                  setImportStatus('No exercise data found in the past month.');
+                }
+              }}
+            >
+              <FileText size={16} /> Export 1RM PDF
             </button>
             <button
               className="btn btn-primary"
