@@ -29,6 +29,13 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     : null;
   const isViewingCompleted = existingSession?.completed === true;
 
+  // Get previous session for this template
+  const previousSession = useMemo(() => {
+    return [...workoutSessions]
+      .filter((s) => s.templateId === templateId && s.completed && s.id !== existingSessionId)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+  }, [workoutSessions, templateId]);
+
   const [sessionId, setSessionId] = useState<string | null>(existingSessionId || null);
   const [exerciseSessions, setExerciseSessions] = useState<WorkoutExerciseSession[]>(() => {
     if (existingSession) return existingSession.exercises;
@@ -36,18 +43,21 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     return template.exercises.map((ex) => {
       const exercise = exercises.find((e) => e.id === ex.exerciseId);
       if (exercise?.isCardio) {
+        const prevEx = previousSession?.exercises.find((e) => e.exerciseId === ex.exerciseId);
         return {
           exerciseId: ex.exerciseId,
           sets: [],
-          cardioMinutes: ex.defaultReps,
+          cardioMinutes: prevEx?.cardioMinutes ?? ex.defaultReps,
           estimatedCalories: 0,
         };
       }
+      // Pre-fill with previous session's reps/load if available
+      const prevSets = previousSession?.exercises.find((e) => e.exerciseId === ex.exerciseId)?.sets.filter(s => s.completed);
       return {
         exerciseId: ex.exerciseId,
-        sets: Array.from({ length: ex.sets }, () => ({
-          reps: ex.defaultReps,
-          loadKg: ex.defaultLoadKg,
+        sets: Array.from({ length: ex.sets }, (_, i) => ({
+          reps: prevSets?.[i]?.reps ?? ex.defaultReps,
+          loadKg: prevSets?.[i]?.loadKg ?? ex.defaultLoadKg,
           completed: false,
         })),
       };
@@ -77,13 +87,6 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     }, 1000);
     return () => clearInterval(interval);
   }, [startTime, isViewingCompleted, preview]);
-
-  // Get previous session for this template
-  const previousSession = useMemo(() => {
-    return [...workoutSessions]
-      .filter((s) => s.templateId === templateId && s.completed && s.id !== existingSessionId)
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
-  }, [workoutSessions, templateId]);
 
   // Get the latest body weight
   const latestWeight = useMemo(() => {
