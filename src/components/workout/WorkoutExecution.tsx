@@ -29,12 +29,23 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     : null;
   const isViewingCompleted = existingSession?.completed === true;
 
-  // Get previous session for this template
-  const previousSession = useMemo(() => {
-    return [...workoutSessions]
-      .filter((s) => s.templateId === templateId && s.completed && s.id !== existingSessionId)
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
-  }, [workoutSessions, templateId]);
+  // Get the latest completed data for each exercise across all workouts
+  const latestExerciseData = useMemo(() => {
+    const map = new Map<string, { sets: WorkoutSet[]; cardioMinutes?: number }>();
+    const sorted = [...workoutSessions]
+      .filter((s) => s.completed && s.id !== existingSessionId)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    for (const session of sorted) {
+      for (const exSession of session.exercises) {
+        if (map.has(exSession.exerciseId)) continue;
+        const completedSets = exSession.sets.filter((s) => s.completed);
+        if (completedSets.length > 0 || exSession.cardioMinutes) {
+          map.set(exSession.exerciseId, { sets: completedSets, cardioMinutes: exSession.cardioMinutes });
+        }
+      }
+    }
+    return map;
+  }, [workoutSessions, existingSessionId]);
 
   const [sessionId, setSessionId] = useState<string | null>(existingSessionId || null);
   const [exerciseSessions, setExerciseSessions] = useState<WorkoutExerciseSession[]>(() => {
@@ -42,17 +53,17 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     if (!template) return [];
     return template.exercises.map((ex) => {
       const exercise = exercises.find((e) => e.id === ex.exerciseId);
+      const prev = latestExerciseData.get(ex.exerciseId);
       if (exercise?.isCardio) {
-        const prevEx = previousSession?.exercises.find((e) => e.exerciseId === ex.exerciseId);
         return {
           exerciseId: ex.exerciseId,
           sets: [],
-          cardioMinutes: prevEx?.cardioMinutes ?? ex.defaultReps,
+          cardioMinutes: prev?.cardioMinutes ?? ex.defaultReps,
           estimatedCalories: 0,
         };
       }
       // Pre-fill with previous session's reps/load if available
-      const prevSets = previousSession?.exercises.find((e) => e.exerciseId === ex.exerciseId)?.sets.filter(s => s.completed);
+      const prevSets = prev?.sets;
       return {
         exerciseId: ex.exerciseId,
         sets: Array.from({ length: ex.sets }, (_, i) => ({
@@ -248,9 +259,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   const isCardio = (id: string) => exercises.find((e) => e.id === id)?.isCardio || false;
 
   const getPreviousSets = (exerciseId: string): WorkoutSet[] => {
-    if (!previousSession) return [];
-    const prevEx = previousSession.exercises.find((e) => e.exerciseId === exerciseId);
-    return prevEx?.sets || [];
+    return latestExerciseData.get(exerciseId)?.sets || [];
   };
 
   if (!template) return <p>Template not found</p>;
