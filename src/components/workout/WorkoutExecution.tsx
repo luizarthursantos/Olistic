@@ -110,6 +110,13 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     }
   }, []);
 
+  // Auto-save progress to store so data persists if the app is closed
+  useEffect(() => {
+    if (sessionId && !isViewingCompleted && !preview) {
+      updateWorkoutSession(sessionId, { exercises: exerciseSessions });
+    }
+  }, [exerciseSessions, sessionId, isViewingCompleted, preview]);
+
   const updateSet = (exIndex: number, setIndex: number, partial: Partial<WorkoutSet>) => {
     setExerciseSessions((prev) => {
       const updated = [...prev];
