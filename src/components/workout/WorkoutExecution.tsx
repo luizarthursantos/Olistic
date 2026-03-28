@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr } from '../../utils/calculations';
@@ -80,6 +80,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   const [endTime, setEndTime] = useState(() => existingSession?.endTime || '');
   const [elapsed, setElapsed] = useState(0);
   const [editSets, setEditSets] = useState(false);
+  const finishedRef = useRef(false);
 
   // Compute static duration for completed sessions
   const completedDuration = useMemo(() => {
@@ -123,7 +124,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
 
   // Auto-save progress to store so data persists if the app is closed
   useEffect(() => {
-    if (sessionId && !isViewingCompleted && !preview) {
+    if (sessionId && !isViewingCompleted && !preview && !finishedRef.current) {
       updateWorkoutSession(sessionId, { exercises: exerciseSessions });
     }
   }, [exerciseSessions, sessionId, isViewingCompleted, preview]);
@@ -206,6 +207,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
 
   const finishWorkout = () => {
     if (!sessionId) return;
+    finishedRef.current = true;
     updateWorkoutSession(sessionId, {
       exercises: exerciseSessions,
       endTime: new Date().toISOString(),
