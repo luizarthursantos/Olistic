@@ -65,6 +65,7 @@ export function WorkoutTab() {
   if (previewTemplateId) {
     return (
       <WorkoutExecution
+        key="preview"
         templateId={previewTemplateId}
         preview
         onFinish={() => setPreviewTemplateId(null)}
@@ -81,6 +82,7 @@ export function WorkoutTab() {
   if (startTemplateId) {
     return (
       <WorkoutExecution
+        key="active"
         templateId={startTemplateId}
         onFinish={() => setStartTemplateId(null)}
       />
