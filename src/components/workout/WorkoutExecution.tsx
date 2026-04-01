@@ -1,8 +1,17 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession } from '../../types';
-import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil } from 'lucide-react';
+import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr, getBestOneRepMax } from '../../utils/calculations';
+import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil, TrendingUp } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts';
 
 interface WorkoutExecutionProps {
   templateId: string;
@@ -80,7 +89,29 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   const [endTime, setEndTime] = useState(() => existingSession?.endTime || '');
   const [elapsed, setElapsed] = useState(0);
   const [editSets, setEditSets] = useState(false);
+  const [chartExerciseId, setChartExerciseId] = useState<string | null>(null);
   const finishedRef = useRef(false);
+
+  // Build 1RM chart data for a given exercise across all workouts
+  const getExerciseChartData = (exerciseId: string) => {
+    const logs: { date: string; orm: number }[] = [];
+    const sorted = [...workoutSessions]
+      .filter((s) => s.completed)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    for (const session of sorted) {
+      const exSession = session.exercises.find((e) => e.exerciseId === exerciseId);
+      if (!exSession) continue;
+      const best = getBestOneRepMax(exSession.sets);
+      if (best <= 0) continue;
+      const existing = logs.find((l) => l.date === session.date);
+      if (existing) {
+        existing.orm = Math.max(existing.orm, best);
+      } else {
+        logs.push({ date: session.date, orm: best });
+      }
+    }
+    return logs;
+  };
 
   // Compute static duration for completed sessions
   const completedDuration = useMemo(() => {
@@ -349,7 +380,68 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
             <span className="exercise-card-name">
               {getExerciseIcon(exSession.exerciseId)} {getExerciseName(exSession.exerciseId)}
             </span>
+            {!isCardio(exSession.exerciseId) && (
+              <button
+                className={`btn btn-icon btn-sm ${chartExerciseId === exSession.exerciseId ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setChartExerciseId(chartExerciseId === exSession.exerciseId ? null : exSession.exerciseId)}
+                title="1RM History"
+              >
+                <TrendingUp size={14} />
+              </button>
+            )}
           </div>
+
+          {chartExerciseId === exSession.exerciseId && (() => {
+            const chartData = getExerciseChartData(exSession.exerciseId);
+            if (chartData.length === 0) return (
+              <div className="text-sm text-muted" style={{ padding: '8px 0' }}>No previous data</div>
+            );
+            return (
+              <div style={{ marginBottom: 8 }}>
+                <ResponsiveContainer width="100%" height={160}>
+                  <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
+                    <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 9, fill: 'var(--text-muted)' }}
+                      tickFormatter={(val: string) => {
+                        const d = new Date(val + 'T12:00:00');
+                        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                        return `${d.getDate()}-${months[d.getMonth()]}`;
+                      }}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 9, fill: 'var(--text-muted)' }}
+                      width={35}
+                      domain={['auto', 'auto']}
+                      tickFormatter={(v: number) => String(Math.round(v))}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 8,
+                        fontSize: 11,
+                      }}
+                      formatter={(value: unknown) => [`${Math.round(Number(value))} kg`, '1RM']}
+                      labelFormatter={(label: unknown) => {
+                        const d = new Date(String(label) + 'T12:00:00');
+                        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="orm"
+                      stroke="var(--accent)"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: 'var(--accent)' }}
+                      connectNulls
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            );
+          })()}
 
           {templateNotes[exSession.exerciseId] && (
             <div className="exercise-note">{templateNotes[exSession.exerciseId]}</div>
