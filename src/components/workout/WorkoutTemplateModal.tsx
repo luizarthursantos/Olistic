@@ -184,6 +184,16 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button
                     className="btn btn-icon btn-secondary btn-sm"
+                    onClick={() => {
+                      const exercise = exercises.find((e) => e.id === ex.exerciseId);
+                      if (exercise) startEditExercise(exercise);
+                    }}
+                    title="Edit exercise"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    className="btn btn-icon btn-secondary btn-sm"
                     onClick={() => moveExercise(i, -1)}
                     disabled={i === 0}
                     title="Move up"
@@ -383,48 +393,6 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
                 )}
               </div>
 
-              {/* Edit exercise modal */}
-              {editingExercise && (
-                <div className="modal-overlay" onClick={() => setEditingExercise(null)}>
-                  <div className="modal" onClick={(e) => e.stopPropagation()}>
-                    <h3 className="modal-title">Edit Exercise</h3>
-                    <div className="form-group">
-                      <label className="label">Name</label>
-                      <input
-                        type="text"
-                        className="input"
-                        value={editExName}
-                        onChange={(e) => setEditExName(e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="label">Icon</label>
-                      <input
-                        type="text"
-                        className="input"
-                        value={editExIcon}
-                        onChange={(e) => setEditExIcon(e.target.value)}
-                        style={{ width: 60 }}
-                      />
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 12, cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={editExCardio}
-                        onChange={(e) => setEditExCardio(e.target.checked)}
-                      />
-                      Cardio exercise
-                    </label>
-                    <div className="modal-actions">
-                      <button className="btn btn-secondary" onClick={() => setEditingExercise(null)}>Cancel</button>
-                      <button className="btn btn-primary" onClick={saveEditExercise} disabled={!editExName.trim()}>
-                        Save
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Delete exercise confirm */}
               {deleteExConfirm && (
                 <div className="modal-overlay" onClick={() => setDeleteExConfirm(null)}>
@@ -440,6 +408,48 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Edit exercise modal */}
+        {editingExercise && (
+          <div className="modal-overlay" onClick={() => setEditingExercise(null)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <h3 className="modal-title">Edit Exercise</h3>
+              <div className="form-group">
+                <label className="label">Name</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={editExName}
+                  onChange={(e) => setEditExName(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Icon</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={editExIcon}
+                  onChange={(e) => setEditExIcon(e.target.value)}
+                  style={{ width: 60 }}
+                />
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 12, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={editExCardio}
+                  onChange={(e) => setEditExCardio(e.target.checked)}
+                />
+                Cardio exercise
+              </label>
+              <div className="modal-actions">
+                <button className="btn btn-secondary" onClick={() => setEditingExercise(null)}>Cancel</button>
+                <button className="btn btn-primary" onClick={saveEditExercise} disabled={!editExName.trim()}>
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         )}
