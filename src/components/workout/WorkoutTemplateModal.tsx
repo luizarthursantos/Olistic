@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutTemplate, WorkoutExerciseTemplate, Exercise } from '../../types';
-import { X, Plus, Trash2, GripVertical, Pencil } from 'lucide-react';
+import { X, Plus, Trash2, Pencil, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface WorkoutTemplateModalProps {
   template: WorkoutTemplate | null;
@@ -44,6 +44,14 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
 
   const removeExercise = (index: number) => {
     setTemplateExercises(templateExercises.filter((_, i) => i !== index));
+  };
+
+  const moveExercise = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= templateExercises.length) return;
+    const updated = [...templateExercises];
+    [updated[index], updated[target]] = [updated[target], updated[index]];
+    setTemplateExercises(updated);
   };
 
   const updateExercise = (index: number, partial: Partial<WorkoutExerciseTemplate>) => {
@@ -173,9 +181,27 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
                 <span className="exercise-card-name">
                   {getExerciseIcon(ex.exerciseId)} {getExerciseName(ex.exerciseId)}
                 </span>
-                <button className="btn btn-icon btn-danger btn-sm" onClick={() => removeExercise(i)}>
-                  <Trash2 size={14} />
-                </button>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    className="btn btn-icon btn-secondary btn-sm"
+                    onClick={() => moveExercise(i, -1)}
+                    disabled={i === 0}
+                    title="Move up"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    className="btn btn-icon btn-secondary btn-sm"
+                    onClick={() => moveExercise(i, 1)}
+                    disabled={i === templateExercises.length - 1}
+                    title="Move down"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                  <button className="btn btn-icon btn-danger btn-sm" onClick={() => removeExercise(i)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
 
               {isCardioExercise(ex.exerciseId) ? (
