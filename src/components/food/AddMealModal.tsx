@@ -32,6 +32,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   const [aiProcessing, setAiProcessing] = useState(false);
   const [aiError, setAiError] = useState('');
   const [aiResults, setAiResults] = useState<FoodAnalysisResult[]>([]);
+  const [aiResultMode, setAiResultMode] = useState<'total' | 'components'>('total');
   const [fromAi, setFromAi] = useState(false);
   const [savedFood, setSavedFood] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -202,24 +203,22 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     try {
       const results = await analyzeFoodDescription(activeApiKey, aiDescription, aiProvider);
       setAiResults(results);
-      if (results.length >= 1) {
-        const combined = results.reduce(
-          (acc, item) => ({
-            name: acc.name,
-            quantityG: acc.quantityG + item.quantityG,
-            proteinG: Math.round((acc.proteinG + item.proteinG) * 10) / 10,
-            carbsG: Math.round((acc.carbsG + item.carbsG) * 10) / 10,
-            fatG: Math.round((acc.fatG + item.fatG) * 10) / 10,
-            sugarG: Math.round((acc.sugarG + item.sugarG) * 10) / 10,
-            fiberG: Math.round((acc.fiberG + item.fiberG) * 10) / 10,
-          }),
-          { name: results.length === 1 ? results[0].name : aiDescription.trim(), quantityG: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
-        );
-        setFormWithBase(combined);
+      if (results.length === 1) {
+        const item = results[0];
+        setFormWithBase({
+          name: item.name,
+          quantityG: item.quantityG,
+          proteinG: item.proteinG,
+          carbsG: item.carbsG,
+          fatG: item.fatG,
+          sugarG: item.sugarG,
+          fiberG: item.fiberG,
+        });
         setFromAi(true);
         setSavedFood(false);
         setMode('manual');
       }
+      // multiple results: stay on AI mode, show total/components toggle
     } catch (err) {
       setAiError(err instanceof Error ? err.message : 'Failed to analyze food');
     } finally {
@@ -249,6 +248,43 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
 
   const addPhotoAsComponents = () => {
     photoResults.forEach((item) => {
+      addMealEntry({
+        date,
+        mealType,
+        name: item.name,
+        quantityG: item.quantityG,
+        proteinG: item.proteinG,
+        carbsG: item.carbsG,
+        fatG: item.fatG,
+        sugarG: item.sugarG,
+        fiberG: item.fiberG,
+        calories: item.calories,
+      });
+    });
+    onClose();
+  };
+
+  const addAiAsTotal = () => {
+    const combined = aiResults.reduce(
+      (acc, item) => ({
+        name: acc.name,
+        quantityG: acc.quantityG + item.quantityG,
+        proteinG: Math.round((acc.proteinG + item.proteinG) * 10) / 10,
+        carbsG: Math.round((acc.carbsG + item.carbsG) * 10) / 10,
+        fatG: Math.round((acc.fatG + item.fatG) * 10) / 10,
+        sugarG: Math.round((acc.sugarG + item.sugarG) * 10) / 10,
+        fiberG: Math.round((acc.fiberG + item.fiberG) * 10) / 10,
+      }),
+      { name: aiDescription.trim() || 'AI meal', quantityG: 0, proteinG: 0, carbsG: 0, fatG: 0, sugarG: 0, fiberG: 0 },
+    );
+    setFormWithBase(combined);
+    setFromAi(true);
+    setSavedFood(false);
+    setMode('manual');
+  };
+
+  const addAiAsComponents = () => {
+    aiResults.forEach((item) => {
       addMealEntry({
         date,
         mealType,
@@ -479,6 +515,76 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
               </p>
             )}
 
+            {/* Multiple AI results — total vs components */}
+            {aiResults.length > 1 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                  <button
+                    className={`btn btn-sm ${aiResultMode === 'total' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setAiResultMode('total')}
+                    style={{ flex: 1 }}
+                  >
+                    Total
+                  </button>
+                  <button
+                    className={`btn btn-sm ${aiResultMode === 'components' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setAiResultMode('components')}
+                    style={{ flex: 1 }}
+                  >
+                    Components
+                  </button>
+                </div>
+
+                {aiResultMode === 'components' && (
+                  <div>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="meals-table" style={{ fontSize: 12, marginBottom: 8 }}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: 'left' }}>Name</th>
+                            <th>Qty</th>
+                            <th>Kcal</th>
+                            <th>P</th>
+                            <th>C</th>
+                            <th>F</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {aiResults.map((item, i) => (
+                            <tr key={i}>
+                              <td style={{ textAlign: 'left' }}>{item.name}</td>
+                              <td style={{ textAlign: 'right' }}>{item.quantityG}</td>
+                              <td style={{ textAlign: 'right' }}>{item.calories}</td>
+                              <td style={{ textAlign: 'right' }}>{item.proteinG}</td>
+                              <td style={{ textAlign: 'right' }}>{item.carbsG}</td>
+                              <td style={{ textAlign: 'right' }}>{item.fatG}</td>
+                            </tr>
+                          ))}
+                          <tr style={{ fontWeight: 700, borderTop: '1px solid var(--border)' }}>
+                            <td style={{ textAlign: 'left' }}>Total</td>
+                            <td style={{ textAlign: 'right' }}>{aiResults.reduce((s, r) => s + r.quantityG, 0)}</td>
+                            <td style={{ textAlign: 'right' }}>{aiResults.reduce((s, r) => s + r.calories, 0)}</td>
+                            <td style={{ textAlign: 'right' }}>{Math.round(aiResults.reduce((s, r) => s + r.proteinG, 0) * 10) / 10}</td>
+                            <td style={{ textAlign: 'right' }}>{Math.round(aiResults.reduce((s, r) => s + r.carbsG, 0) * 10) / 10}</td>
+                            <td style={{ textAlign: 'right' }}>{Math.round(aiResults.reduce((s, r) => s + r.fatG, 0) * 10) / 10}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <button className="btn btn-primary" style={{ width: '100%' }} onClick={addAiAsComponents}>
+                      <Check size={14} /> Add {aiResults.length} Components
+                    </button>
+                  </div>
+                )}
+
+                {aiResultMode === 'total' && (
+                  <button className="btn btn-primary" style={{ width: '100%' }} onClick={addAiAsTotal}>
+                    Add as Total
+                  </button>
+                )}
+              </div>
+            )}
+
           </div>
         )}
 
@@ -669,7 +775,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
         )}
 
         {/* Manual form (always shown for final entry) */}
-        {(mode === 'manual' || ((mode === 'photo' || mode === 'ai') && photoResults.length <= 1)) && !photoProcessing && !aiProcessing && (
+        {(mode === 'manual' || (mode === 'photo' && photoResults.length <= 1) || (mode === 'ai' && aiResults.length <= 1)) && !photoProcessing && !aiProcessing && (
           <>
             <div className="form-row">
               <div className="form-group" style={{ flex: 2 }}>
@@ -769,7 +875,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
           </>
         )}
 
-        {(!photoProcessing && !aiProcessing && !(mode === 'photo' && photoResults.length > 1)) && (
+        {(!photoProcessing && !aiProcessing && !(mode === 'photo' && photoResults.length > 1) && !(mode === 'ai' && aiResults.length > 1)) && (
           <div className="modal-actions">
             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
             {fromAi && form.name.trim() && (
