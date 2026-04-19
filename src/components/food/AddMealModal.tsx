@@ -203,22 +203,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     try {
       const results = await analyzeFoodDescription(activeApiKey, aiDescription, aiProvider);
       setAiResults(results);
-      if (results.length === 1) {
-        const item = results[0];
-        setFormWithBase({
-          name: item.name,
-          quantityG: item.quantityG,
-          proteinG: item.proteinG,
-          carbsG: item.carbsG,
-          fatG: item.fatG,
-          sugarG: item.sugarG,
-          fiberG: item.fiberG,
-        });
-        setFromAi(true);
-        setSavedFood(false);
-        setMode('manual');
-      }
-      // multiple results: stay on AI mode, show total/components toggle
+      // always stay on AI mode to show total/components toggle
     } catch (err) {
       setAiError(err instanceof Error ? err.message : 'Failed to analyze food');
     } finally {
@@ -516,7 +501,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
             )}
 
             {/* Multiple AI results — total vs components */}
-            {aiResults.length > 1 && (
+            {aiResults.length >= 1 && (
               <div style={{ marginTop: 16 }}>
                 <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                   <button
@@ -572,7 +557,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
                       </table>
                     </div>
                     <button className="btn btn-primary" style={{ width: '100%' }} onClick={addAiAsComponents}>
-                      <Check size={14} /> Add {aiResults.length} Components
+                      <Check size={14} /> Add {aiResults.length} {aiResults.length === 1 ? 'Item' : 'Components'}
                     </button>
                   </div>
                 )}
@@ -775,7 +760,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
         )}
 
         {/* Manual form (always shown for final entry) */}
-        {(mode === 'manual' || (mode === 'photo' && photoResults.length <= 1) || (mode === 'ai' && aiResults.length <= 1)) && !photoProcessing && !aiProcessing && (
+        {(mode === 'manual' || (mode === 'photo' && photoResults.length <= 1) || (mode === 'ai' && aiResults.length === 0)) && !photoProcessing && !aiProcessing && (
           <>
             <div className="form-row">
               <div className="form-group" style={{ flex: 2 }}>
@@ -875,7 +860,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
           </>
         )}
 
-        {(!photoProcessing && !aiProcessing && !(mode === 'photo' && photoResults.length > 1) && !(mode === 'ai' && aiResults.length > 1)) && (
+        {(!photoProcessing && !aiProcessing && !(mode === 'photo' && photoResults.length > 1) && !(mode === 'ai' && aiResults.length >= 1)) && (
           <div className="modal-actions">
             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
             {fromAi && form.name.trim() && (
