@@ -11,7 +11,7 @@ export interface FoodAnalysisResult {
   fiberG: number;
 }
 
-const FOOD_DESCRIPTION_PROMPT = (description: string) =>
+const FOOD_DESCRIPTION_PROMPT = (description: string, breakdown: boolean) =>
   `Estimate the nutritional content of this food/meal based on the description:
 
 "${description}"
@@ -23,12 +23,13 @@ Rules:
 - All numbers should be integers (round to nearest whole number)
 - quantityG is the estimated weight in grams of the portion
 - calories should be the total kcal value for that portion
-- If multiple items are described, return one entry per item
-- If it's a single dish, return one entry
+${breakdown
+    ? '- Break down the meal into individual components, returning one entry per item'
+    : '- Combine everything into a single entry with summed totals'}
 - Use the portion sizes mentioned, or reasonable defaults if not specified
 - Be as accurate as possible with your nutritional estimates`;
 
-const FOOD_PHOTO_PROMPT = (descriptionHint: string) =>
+const FOOD_PHOTO_PROMPT = (descriptionHint: string, breakdown: boolean) =>
   `Analyze this food image. It could be a photo of food/meal or a nutritional facts label/table.
 
 If it's a photo of food: estimate the nutritional content based on what you see, including reasonable portion sizes.
@@ -41,8 +42,9 @@ Rules:
 - All numbers should be integers (round to nearest whole number)
 - quantityG is the estimated weight in grams of the portion
 - calories should be the total kcal value for that portion
-- If multiple items are visible, return one entry per item
-- If it's a single dish, return one entry
+${breakdown
+    ? '- Break down the meal into individual components, returning one entry per item'
+    : '- Combine everything into a single entry with summed totals'}
 - Use reasonable portion estimates for a single serving
 - Be as accurate as possible${descriptionHint}`;
 
@@ -182,8 +184,9 @@ export async function analyzeFoodDescription(
   apiKey: string,
   description: string,
   provider: AiProvider = 'claude',
+  breakdown = false,
 ): Promise<FoodAnalysisResult[]> {
-  const prompt = FOOD_DESCRIPTION_PROMPT(description);
+  const prompt = FOOD_DESCRIPTION_PROMPT(description, breakdown);
   const text = provider === 'gemini'
     ? await geminiTextRequest(apiKey, prompt)
     : await claudeTextRequest(apiKey, prompt);
@@ -196,11 +199,12 @@ export async function analyzeFoodPhoto(
   mediaType: string,
   description?: string,
   provider: AiProvider = 'claude',
+  breakdown = false,
 ): Promise<FoodAnalysisResult[]> {
   const descriptionHint = description
     ? `\n\nThe user provided this description of the image: "${description}". Use this to improve your analysis.`
     : '';
-  const prompt = FOOD_PHOTO_PROMPT(descriptionHint);
+  const prompt = FOOD_PHOTO_PROMPT(descriptionHint, breakdown);
   const text = provider === 'gemini'
     ? await geminiPhotoRequest(apiKey, imageBase64, mediaType, prompt)
     : await claudePhotoRequest(apiKey, imageBase64, mediaType, prompt);
