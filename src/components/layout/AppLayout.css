@@ -41,17 +41,17 @@
   }
 }
 
-.app-main-flex {
+.app-main.app-main-flex {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: hidden;
 }
 
 .app-nav {
   display: flex;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
-  padding: 8px 0 12px;
+  padding: 8px 0 calc(12px + env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
 }
 
