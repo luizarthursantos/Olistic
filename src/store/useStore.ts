@@ -19,6 +19,7 @@ import {
   WorkoutExerciseTemplate,
   WorkoutExerciseSession,
 } from '../types';
+import { ChatMessage } from '../utils/aiChat';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { DEFAULT_EXERCISES } from '../utils/defaultExercises';
 import { generateAllSampleData } from '../utils/sampleData';
@@ -83,6 +84,10 @@ export interface AppState {
   setSelectedDate: (date: string) => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+
+  // AI Chat (in-memory only)
+  chatMessages: ChatMessage[];
+  setChatMessages: (messages: ChatMessage[]) => void;
 
   // Sample data
   loadSampleData: () => void;
@@ -300,6 +305,10 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedDate: (date) => set({ selectedDate: date }),
   activeTab: 'body',
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  // AI Chat
+  chatMessages: [],
+  setChatMessages: (messages) => set({ chatMessages: messages }),
 
   // Sample data
   loadSampleData: () => {
