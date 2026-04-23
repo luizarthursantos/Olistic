@@ -149,7 +149,7 @@ async function claudeChat(apiKey: string, systemPrompt: string, messages: ChatMe
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6-20260218',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       system: systemPrompt,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
