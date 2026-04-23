@@ -188,6 +188,9 @@
   margin: 4px 0;
   font-size: 13px;
   width: 100%;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .ai-chat-msg.assistant .ai-chat-msg-content th,
@@ -195,10 +198,18 @@
   border: 1px solid var(--border);
   padding: 4px 8px;
   text-align: left;
+  white-space: nowrap;
 }
 
 .ai-chat-msg.assistant .ai-chat-msg-content th {
   font-weight: 600;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.ai-chat-msg.assistant .ai-chat-msg-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 8px 0;
 }
 
 .ai-typing {

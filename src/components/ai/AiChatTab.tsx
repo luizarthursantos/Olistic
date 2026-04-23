@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { Send, Trash2, AlertCircle, Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ChatMessage, sendChatMessage, buildDataSummary } from '../../utils/aiChat';
 import './AiChatTab.css';
 
@@ -121,7 +122,7 @@ export function AiChatTab() {
             </div>
             <div className="ai-chat-msg-content">
               {msg.role === 'assistant' ? (
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
               ) : (
                 msg.content.split('\n').map((line, j) => (
                   <p key={j}>{line || ' '}</p>
