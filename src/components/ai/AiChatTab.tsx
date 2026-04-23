@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { Send, Trash2, AlertCircle, Bot, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { ChatMessage, sendChatMessage, buildDataSummary } from '../../utils/aiChat';
 import './AiChatTab.css';
 
@@ -119,9 +120,13 @@ export function AiChatTab() {
               {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
             </div>
             <div className="ai-chat-msg-content">
-              {msg.content.split('\n').map((line, j) => (
-                <p key={j}>{line || ' '}</p>
-              ))}
+              {msg.role === 'assistant' ? (
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content.split('\n').map((line, j) => (
+                  <p key={j}>{line || ' '}</p>
+                ))
+              )}
             </div>
           </div>
         ))}
