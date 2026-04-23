@@ -78,7 +78,7 @@ async function claudeTextRequest(apiKey: string, prompt: string): Promise<string
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6-20250514',
+      model: 'claude-sonnet-4-6-20260218',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -106,7 +106,7 @@ async function claudePhotoRequest(
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6-20250514',
+      model: 'claude-sonnet-4-6-20260218',
       max_tokens: 1024,
       messages: [{
         role: 'user',
