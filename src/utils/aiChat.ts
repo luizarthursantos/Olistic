@@ -16,8 +16,8 @@ function buildDataSummary(
   macroTargets: MacroTargets[],
 ): string {
   const age = calcAge(settings.birthday);
-  const sorted = [...bodyEntries].sort((a, b) => b.date.localeCompare(a.date));
-  const latest = sorted[0];
+  const sortedBody = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
+  const latest = sortedBody[sortedBody.length - 1];
 
   let summary = `USER PROFILE:
 - Age: ${age}, Sex: ${settings.sex}, Height: ${settings.heightCm} cm
@@ -30,72 +30,82 @@ function buildDataSummary(
     const ffmi = bf > 0 ? calcFFMI(latest.weightKg, bf, settings.heightCm) : 0;
     const bmr = calcBMR(settings.sex, latest.weightKg, settings.heightCm, age);
     const tdee = calcTDEE(bmr, settings.activityLevel);
-    summary += `\nLATEST BODY ENTRY (${latest.date}):
-- Weight: ${latest.weightKg} kg, Waist: ${latest.waistCm} cm, Neck: ${latest.neckCm} cm
+    summary += `\nCURRENT CALCULATED VALUES (from latest entry ${latest.date}):
 - Estimated body fat: ${bf}%, FFMI: ${ffmi}
 - BMR: ${bmr} kcal, TDEE: ${tdee} kcal\n`;
-
-    if (sorted.length >= 2) {
-      const oldest = sorted[sorted.length - 1];
-      const weightDelta = Math.round((latest.weightKg - oldest.weightKg) * 10) / 10;
-      summary += `- Weight trend: ${weightDelta > 0 ? '+' : ''}${weightDelta} kg over ${sorted.length} entries (${oldest.date} to ${latest.date})\n`;
-    }
   }
 
-  const recentMeals = [...mealEntries].sort((a, b) => b.date.localeCompare(a.date));
-  if (recentMeals.length > 0) {
-    const dates = [...new Set(recentMeals.map(m => m.date))].slice(0, 7);
-    summary += `\nRECENT NUTRITION (last ${dates.length} days with entries):\n`;
-    for (const date of dates) {
-      const dayMeals = recentMeals.filter(m => m.date === date);
-      const totals = dayMeals.reduce((acc, m) => ({
-        cal: acc.cal + m.calories,
-        p: acc.p + m.proteinG,
-        c: acc.c + m.carbsG,
-        f: acc.f + m.fatG,
-      }), { cal: 0, p: 0, c: 0, f: 0 });
-      summary += `  ${date}: ${totals.cal} kcal, P${Math.round(totals.p)}g C${Math.round(totals.c)}g F${Math.round(totals.f)}g (${dayMeals.length} meals)\n`;
-    }
-  }
-
-  const currentTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date))[0];
-  if (currentTargets) {
+  if (macroTargets.length > 0) {
+    const currentTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date))[0];
     summary += `\nMACRO TARGETS: ${currentTargets.calories} kcal, P${currentTargets.proteinG}g C${currentTargets.carbsG}g F${currentTargets.fatG}g\n`;
   }
 
-  const completedSessions = workoutSessions.filter(s => s.completed);
-  const recentSessions = [...completedSessions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14);
-  if (recentSessions.length > 0) {
-    summary += `\nRECENT WORKOUTS (last ${recentSessions.length} sessions):\n`;
-    for (const session of recentSessions) {
-      const template = workoutTemplates.find(t => t.id === session.templateId);
-      const name = template?.name || 'Unknown';
-      const exCount = session.exercises.length;
-      const totalSets = session.exercises.reduce((sum, e) => sum + e.sets.filter(s => s.completed).length, 0);
-      summary += `  ${session.date}: ${name} — ${exCount} exercises, ${totalSets} sets, ${session.estimatedCalories} kcal\n`;
-    }
-
-    const exerciseMap = new Map<string, number>();
-    for (const session of completedSessions) {
-      for (const ex of session.exercises) {
-        const exercise = exercises.find(e => e.id === ex.exerciseId);
-        if (!exercise || exercise.isCardio) continue;
-        const orm = getBestOneRepMax(ex.sets);
-        if (orm > (exerciseMap.get(ex.exerciseId) || 0)) {
-          exerciseMap.set(ex.exerciseId, orm);
-        }
-      }
-    }
-    if (exerciseMap.size > 0) {
-      summary += `\nBEST 1RM ESTIMATES:\n`;
-      exerciseMap.forEach((orm, exId) => {
-        const exercise = exercises.find(e => e.id === exId);
-        if (exercise) summary += `  ${exercise.name}: ${orm} kg\n`;
-      });
+  // Full body history
+  if (sortedBody.length > 0) {
+    summary += `\nBODY HISTORY (${sortedBody.length} entries, oldest first):\n`;
+    summary += `  date | weight(kg) | waist(cm) | neck(cm)\n`;
+    for (const entry of sortedBody) {
+      summary += `  ${entry.date} | ${entry.weightKg} | ${entry.waistCm} | ${entry.neckCm}\n`;
     }
   }
 
-  summary += `\nTOTAL DATA: ${bodyEntries.length} body entries, ${mealEntries.length} meal entries, ${completedSessions.length} completed workouts, ${workoutTemplates.length} templates\n`;
+  // Full nutrition history — group by date for readability
+  const sortedMeals = [...mealEntries].sort((a, b) => a.date.localeCompare(b.date));
+  if (sortedMeals.length > 0) {
+    const mealsByDate = new Map<string, MealEntry[]>();
+    for (const m of sortedMeals) {
+      if (!mealsByDate.has(m.date)) mealsByDate.set(m.date, []);
+      mealsByDate.get(m.date)!.push(m);
+    }
+    summary += `\nNUTRITION HISTORY (${sortedMeals.length} meals across ${mealsByDate.size} days):\n`;
+    mealsByDate.forEach((meals, date) => {
+      const totals = meals.reduce((acc, m) => ({
+        cal: acc.cal + m.calories, p: acc.p + m.proteinG, c: acc.c + m.carbsG, f: acc.f + m.fatG,
+        sugar: acc.sugar + m.sugarG, fiber: acc.fiber + m.fiberG,
+      }), { cal: 0, p: 0, c: 0, f: 0, sugar: 0, fiber: 0 });
+      summary += `  ${date} — TOTAL: ${totals.cal} kcal, P${Math.round(totals.p)}g C${Math.round(totals.c)}g F${Math.round(totals.f)}g Sugar${Math.round(totals.sugar)}g Fiber${Math.round(totals.fiber)}g\n`;
+      for (const m of meals) {
+        summary += `    [${m.mealType}] ${m.name}: ${m.calories} kcal, P${m.proteinG}g C${m.carbsG}g F${m.fatG}g${m.quantityG ? ` (${m.quantityG}g)` : ''}\n`;
+      }
+    });
+  }
+
+  // Workout templates
+  if (workoutTemplates.length > 0) {
+    summary += `\nWORKOUT TEMPLATES (${workoutTemplates.length}):\n`;
+    for (const t of workoutTemplates) {
+      const exNames = t.exercises.map(e => {
+        const ex = exercises.find(x => x.id === e.exerciseId);
+        return ex ? `${ex.name} (${e.sets}x${e.defaultReps}@${e.defaultLoadKg}kg)` : 'Unknown';
+      });
+      summary += `  "${t.name}": ${exNames.join(', ')}\n`;
+    }
+  }
+
+  // Full workout session history
+  const sortedSessions = [...workoutSessions]
+    .filter(s => s.completed)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (sortedSessions.length > 0) {
+    summary += `\nWORKOUT HISTORY (${sortedSessions.length} completed sessions, oldest first):\n`;
+    for (const session of sortedSessions) {
+      const template = workoutTemplates.find(t => t.id === session.templateId);
+      const name = template?.name || 'Unknown';
+      summary += `  ${session.date} "${name}" (${session.estimatedCalories} kcal, ${session.startTime?.slice(11, 16) || '?'}–${session.endTime?.slice(11, 16) || '?'}):\n`;
+      for (const exSession of session.exercises) {
+        const exercise = exercises.find(e => e.id === exSession.exerciseId);
+        const exName = exercise?.name || 'Unknown';
+        if (exercise?.isCardio) {
+          summary += `    ${exName}: ${exSession.cardioMinutes || 0} min${exSession.estimatedCalories ? `, ${exSession.estimatedCalories} kcal` : ''}\n`;
+        } else {
+          const completedSets = exSession.sets.filter(s => s.completed);
+          const setsStr = completedSets.map(s => `${s.reps}x${s.loadKg}kg`).join(', ');
+          const orm = getBestOneRepMax(exSession.sets);
+          summary += `    ${exName}: ${setsStr}${orm > 0 ? ` (est. 1RM: ${orm}kg)` : ''}\n`;
+        }
+      }
+    }
+  }
 
   return summary;
 }
