@@ -31,7 +31,7 @@ export function AppLayout({ children, onOpenSettings }: AppLayoutProps) {
           <Settings size={18} />
         </button>
       </header>
-      <main className="app-main">{children}</main>
+      <main className={`app-main${activeTab === 'ai' ? ' app-main-flex' : ''}`}>{children}</main>
       <nav className="app-nav">
         {tabs.map((tab) => {
           const Icon = tab.icon;

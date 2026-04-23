@@ -41,6 +41,12 @@
   }
 }
 
+.app-main-flex {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .app-nav {
   display: flex;
   background: var(--bg-secondary);
