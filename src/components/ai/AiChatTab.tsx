@@ -84,7 +84,7 @@ export function AiChatTab() {
         <div>
           <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>AI Assistant</h3>
           <p className="text-sm text-muted" style={{ margin: 0 }}>
-            Using {settings.aiProvider === 'gemini' ? 'Gemini' : 'Claude'} · Aware of your logged data
+            {settings.aiProvider === 'gemini' ? 'Gemini 2.0 Flash' : 'Claude Sonnet 4.6'} · Aware of your logged data
           </p>
         </div>
         {messages.length > 0 && (

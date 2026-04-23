@@ -1,8 +1,17 @@
 .ai-chat-tab {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 120px);
-  max-height: calc(100dvh - 120px);
+  height: calc(100dvh - 120px);
+  margin: -20px;
+  padding: 20px;
+  overflow: hidden;
+}
+
+@media (max-width: 500px) {
+  .ai-chat-tab {
+    margin: -16px -12px;
+    padding: 16px 12px;
+  }
 }
 
 .ai-chat-header {
