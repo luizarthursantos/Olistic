@@ -16,10 +16,14 @@ function buildDataSummary(
   macroTargets: MacroTargets[],
 ): string {
   const age = calcAge(settings.birthday);
-  const sortedBody = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
-  const latest = sortedBody[sortedBody.length - 1];
+  const today = new Date().toISOString().slice(0, 10);
+  const sortedBody = [...bodyEntries].sort((a, b) => b.date.localeCompare(a.date));
+  const latest = sortedBody[0];
 
-  let summary = `USER PROFILE:
+  let summary = `TODAY'S DATE: ${today}
+All dates below are in YYYY-MM-DD format. Interpret them carefully — pay attention to the year.
+
+USER PROFILE:
 - Age: ${age}, Sex: ${settings.sex}, Height: ${settings.heightCm} cm
 - Activity level: ${settings.activityLevel.replace(/_/g, ' ')}
 - Unit system: ${settings.unitSystem}
@@ -30,7 +34,8 @@ function buildDataSummary(
     const ffmi = bf > 0 ? calcFFMI(latest.weightKg, bf, settings.heightCm) : 0;
     const bmr = calcBMR(settings.sex, latest.weightKg, settings.heightCm, age);
     const tdee = calcTDEE(bmr, settings.activityLevel);
-    summary += `\nCURRENT CALCULATED VALUES (from latest entry ${latest.date}):
+    summary += `\nLATEST BODY MEASUREMENTS (${latest.date}):
+- Weight: ${latest.weightKg} kg, Waist: ${latest.waistCm} cm, Neck: ${latest.neckCm} cm
 - Estimated body fat: ${bf}%, FFMI: ${ffmi}
 - BMR: ${bmr} kcal, TDEE: ${tdee} kcal\n`;
   }
@@ -40,24 +45,23 @@ function buildDataSummary(
     summary += `\nMACRO TARGETS: ${currentTargets.calories} kcal, P${currentTargets.proteinG}g C${currentTargets.carbsG}g F${currentTargets.fatG}g\n`;
   }
 
-  // Full body history
+  // Body history — most recent first
   if (sortedBody.length > 0) {
-    summary += `\nBODY HISTORY (${sortedBody.length} entries, oldest first):\n`;
-    summary += `  date | weight(kg) | waist(cm) | neck(cm)\n`;
+    summary += `\nBODY HISTORY (${sortedBody.length} entries, most recent first):\n`;
     for (const entry of sortedBody) {
-      summary += `  ${entry.date} | ${entry.weightKg} | ${entry.waistCm} | ${entry.neckCm}\n`;
+      summary += `  ${entry.date}: ${entry.weightKg}kg, waist ${entry.waistCm}cm, neck ${entry.neckCm}cm\n`;
     }
   }
 
-  // Full nutrition history — group by date for readability
-  const sortedMeals = [...mealEntries].sort((a, b) => a.date.localeCompare(b.date));
+  // Nutrition history — most recent first, grouped by date
+  const sortedMeals = [...mealEntries].sort((a, b) => b.date.localeCompare(a.date));
   if (sortedMeals.length > 0) {
     const mealsByDate = new Map<string, MealEntry[]>();
     for (const m of sortedMeals) {
       if (!mealsByDate.has(m.date)) mealsByDate.set(m.date, []);
       mealsByDate.get(m.date)!.push(m);
     }
-    summary += `\nNUTRITION HISTORY (${sortedMeals.length} meals across ${mealsByDate.size} days):\n`;
+    summary += `\nNUTRITION HISTORY (${sortedMeals.length} meals across ${mealsByDate.size} days, most recent first):\n`;
     mealsByDate.forEach((meals, date) => {
       const totals = meals.reduce((acc, m) => ({
         cal: acc.cal + m.calories, p: acc.p + m.proteinG, c: acc.c + m.carbsG, f: acc.f + m.fatG,
@@ -82,12 +86,12 @@ function buildDataSummary(
     }
   }
 
-  // Full workout session history
+  // Workout session history — most recent first
   const sortedSessions = [...workoutSessions]
     .filter(s => s.completed)
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => b.date.localeCompare(a.date));
   if (sortedSessions.length > 0) {
-    summary += `\nWORKOUT HISTORY (${sortedSessions.length} completed sessions, oldest first):\n`;
+    summary += `\nWORKOUT HISTORY (${sortedSessions.length} completed sessions, most recent first):\n`;
     for (const session of sortedSessions) {
       const template = workoutTemplates.find(t => t.id === session.templateId);
       const name = template?.name || 'Unknown';
@@ -111,16 +115,21 @@ function buildDataSummary(
 }
 
 const SYSTEM_PROMPT = (dataSummary: string) =>
-  `You are an AI fitness and nutrition assistant inside "Olistic", a personal health tracking app. You have access to the user's logged data below. Use this data to give personalized feedback, insights, recommendations, or just chat.
+  `You are an AI fitness and nutrition assistant inside "Olistic", a personal health tracking app. You have access to the user's complete logged data below. Use this data to give personalized feedback, insights, recommendations, or just chat.
 
-Be concise and helpful. Use the data to back up your points when relevant. You can:
+IMPORTANT RULES:
+- All dates in the data are in YYYY-MM-DD format (e.g. 2026-04-23 = April 23, 2026). Read them carefully, especially the year.
+- Data is sorted most recent first. The first entry in each section is the most recent.
+- Only state facts that are directly supported by the data. Do not guess or assume values not present.
+- Be concise and helpful. Use the data to back up your points when relevant.
+- Use metric units unless the user's settings indicate imperial.
+
+You can:
 - Analyze trends in weight, body composition, nutrition, and workouts
 - Suggest improvements to training or diet
 - Answer fitness/nutrition questions with context from their data
 - Give encouragement and accountability
 - Calculate or estimate things based on their logged data
-
-Keep responses conversational and focused. Use metric units unless the user's settings indicate imperial.
 
 --- USER DATA ---
 ${dataSummary}`;
