@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import { Activity, Utensils, Dumbbell, BarChart3, Settings } from 'lucide-react';
+import { Activity, Utensils, Dumbbell, BarChart3, Settings, MessageCircle } from 'lucide-react';
 import './AppLayout.css';
 
 interface AppLayoutProps {
@@ -20,6 +20,7 @@ export function AppLayout({ children, onOpenSettings }: AppLayoutProps) {
     { id: 'food', label: 'Food', icon: Utensils },
     { id: 'workout', label: 'Workout', icon: Dumbbell },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'ai', label: 'AI', icon: MessageCircle },
   ];
 
   return (

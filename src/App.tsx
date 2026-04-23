@@ -7,6 +7,7 @@ import { BodyTab } from './components/body/BodyTab';
 import { FoodTab } from './components/food/FoodTab';
 import { WorkoutTab } from './components/workout/WorkoutTab';
 import { AnalyticsTab } from './components/analytics/AnalyticsTab';
+import { AiChatTab } from './components/ai/AiChatTab';
 
 function App() {
   const { settings, activeTab } = useStore();
@@ -26,6 +27,8 @@ function App() {
         return <WorkoutTab />;
       case 'analytics':
         return <AnalyticsTab />;
+      case 'ai':
+        return <AiChatTab />;
       default:
         return <BodyTab />;
     }
