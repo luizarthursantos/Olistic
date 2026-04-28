@@ -414,7 +414,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
                       tick={{ fontSize: 9, fill: 'var(--text-muted)' }}
                       width={35}
                       domain={['auto', 'auto']}
-                      tickFormatter={(v: number) => String(Math.round(v))}
+                      tickFormatter={(v: number) => v % 1 === 0 ? String(v) : v.toFixed(1)}
                     />
                     <Tooltip
                       contentStyle={{
@@ -423,7 +423,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
                         borderRadius: 8,
                         fontSize: 11,
                       }}
-                      formatter={(value: unknown) => [`${Math.round(Number(value))} kg`, '1RM']}
+                      formatter={(value: unknown) => [`${Number(value).toFixed(1)} kg`, '1RM']}
                       labelFormatter={(label: unknown) => {
                         const d = new Date(String(label) + 'T12:00:00');
                         return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });

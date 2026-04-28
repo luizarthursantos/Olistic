@@ -134,7 +134,7 @@ export function estimateCardioCalories(
 export function calcOneRepMax(weight: number, reps: number): number {
   if (reps === 1) return weight;
   if (reps === 0 || weight === 0) return 0;
-  return Math.round(weight * (1 + reps / 30));
+  return Math.round(weight * (1 + reps / 30) * 10) / 10;
 }
 
 /**
