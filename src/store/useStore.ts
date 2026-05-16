@@ -108,6 +108,10 @@ const defaultSettings: UserSettings = {
   geminiApiKey: '',
   aiProvider: 'claude',
   chartLineAlpha: 60,
+  proteinPerKg: 2.0,
+  fatPerKg: 1.0,
+  fiberPerKg: 0.4,
+  sugarLimitG: 50,
 };
 
 const today = toLocalDateStr(new Date());

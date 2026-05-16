@@ -21,6 +21,10 @@ export interface UserSettings {
   geminiApiKey: string;
   aiProvider: AiProvider;
   chartLineAlpha: number; // 0-100, line opacity % when moving average enabled
+  proteinPerKg: number;
+  fatPerKg: number;
+  fiberPerKg: number;
+  sugarLimitG: number;
 }
 
 export interface BodyEntry {

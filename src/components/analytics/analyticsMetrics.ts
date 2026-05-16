@@ -13,6 +13,8 @@ import {
   calcTDEE,
   calcAge,
   getBestOneRepMax,
+  get7DayAvgWeight,
+  computeMacrosFromWeight,
 } from '../../utils/calculations';
 
 export interface MetricDefinition {
@@ -80,6 +82,20 @@ export function getMetricData(
   const { bodyEntries, mealEntries, macroTargets, workoutSessions, settings } = state;
   const age = calcAge(settings.birthday);
   const n = (v: unknown): number => { const x = Number(v); return isFinite(x) ? x : 0; };
+
+  const resolveTargetsForDate = (date: string) => {
+    const sortedT = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
+    const target = sortedT.find((t) => t.date <= date);
+    if (!target) return null;
+    const w = get7DayAvgWeight(bodyEntries, date);
+    if (!w) return target;
+    const computed = computeMacrosFromWeight(
+      target.calories, w,
+      settings.proteinPerKg ?? 2.0, settings.fatPerKg ?? 1.0,
+      settings.fiberPerKg ?? 0.4, settings.sugarLimitG ?? 50,
+    );
+    return { ...target, ...computed };
+  };
 
   const entries = bodyEntries;
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
@@ -281,25 +297,42 @@ export function getMetricData(
     }
 
     case 'food_target_calories': {
-      const sorted = [...macroTargets].sort((a, b) => a.date.localeCompare(b.date));
-      return sorted.map((t) => ({ date: t.date, value: n(t.calories) }));
+      const allDates = [...new Set(mealEntries.map(m => m.date))].sort();
+      return allDates.map((date) => {
+        const t = resolveTargetsForDate(date);
+        return t ? { date, value: n(t.calories) } : null;
+      }).filter(Boolean) as { date: string; value: number }[];
     }
 
-    case 'food_target_protein':
-      return [...macroTargets].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({ date: t.date, value: n(t.proteinG) }));
+    case 'food_target_protein': {
+      const allDates = [...new Set(mealEntries.map(m => m.date))].sort();
+      return allDates.map((date) => {
+        const t = resolveTargetsForDate(date);
+        return t ? { date, value: n(t.proteinG) } : null;
+      }).filter(Boolean) as { date: string; value: number }[];
+    }
 
-    case 'food_target_carbs':
-      return [...macroTargets].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({ date: t.date, value: n(t.carbsG) }));
+    case 'food_target_carbs': {
+      const allDates = [...new Set(mealEntries.map(m => m.date))].sort();
+      return allDates.map((date) => {
+        const t = resolveTargetsForDate(date);
+        return t ? { date, value: n(t.carbsG) } : null;
+      }).filter(Boolean) as { date: string; value: number }[];
+    }
 
-    case 'food_target_fat':
-      return [...macroTargets].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({ date: t.date, value: n(t.fatG) }));
+    case 'food_target_fat': {
+      const allDates = [...new Set(mealEntries.map(m => m.date))].sort();
+      return allDates.map((date) => {
+        const t = resolveTargetsForDate(date);
+        return t ? { date, value: n(t.fatG) } : null;
+      }).filter(Boolean) as { date: string; value: number }[];
+    }
 
     case 'food_delta_calories': {
       const byDate: Record<string, number> = {};
       mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.calories); });
-      const sortedTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
       return Object.entries(byDate).map(([date, consumed]) => {
-        const target = sortedTargets.find((t) => t.date <= date);
+        const target = resolveTargetsForDate(date);
         return { date, value: consumed - n(target?.calories) };
       });
     }
@@ -307,9 +340,8 @@ export function getMetricData(
     case 'food_delta_protein': {
       const byDate: Record<string, number> = {};
       mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.proteinG); });
-      const sortedTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
       return Object.entries(byDate).map(([date, consumed]) => {
-        const target = sortedTargets.find((t) => t.date <= date);
+        const target = resolveTargetsForDate(date);
         return { date, value: Math.round((consumed - n(target?.proteinG)) * 10) / 10 };
       });
     }
@@ -317,9 +349,8 @@ export function getMetricData(
     case 'food_delta_carbs': {
       const byDate: Record<string, number> = {};
       mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.carbsG); });
-      const sortedTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
       return Object.entries(byDate).map(([date, consumed]) => {
-        const target = sortedTargets.find((t) => t.date <= date);
+        const target = resolveTargetsForDate(date);
         return { date, value: Math.round((consumed - n(target?.carbsG)) * 10) / 10 };
       });
     }
@@ -327,9 +358,8 @@ export function getMetricData(
     case 'food_delta_fat': {
       const byDate: Record<string, number> = {};
       mealEntries.forEach((m) => { byDate[m.date] = (byDate[m.date] || 0) + n(m.fatG); });
-      const sortedTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
       return Object.entries(byDate).map(([date, consumed]) => {
-        const target = sortedTargets.find((t) => t.date <= date);
+        const target = resolveTargetsForDate(date);
         return { date, value: Math.round((consumed - n(target?.fatG)) * 10) / 10 };
       });
     }

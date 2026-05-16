@@ -5,7 +5,7 @@ import { ConfirmDialog } from '../common/ConfirmDialog';
 import { MealType, MEAL_TYPE_LABELS } from '../../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Plus, Trash2, Target, Pencil } from 'lucide-react';
-import { calcCaloriesFromMacros } from '../../utils/calculations';
+import { calcCaloriesFromMacros, get7DayAvgWeight, computeMacrosFromWeight } from '../../utils/calculations';
 import { AddMealModal } from './AddMealModal';
 import { MacroTargetsModal } from './MacroTargetsModal';
 import './FoodTab.css';
@@ -39,7 +39,7 @@ interface MacroRow {
 }
 
 export function FoodTab() {
-  const { selectedDate, mealEntries, getMealsForDate, deleteMealEntry, updateMealEntry, getMacroTargetsForDate } = useStore();
+  const { selectedDate, mealEntries, getMealsForDate, deleteMealEntry, updateMealEntry, getMacroTargetsForDate, settings, bodyEntries } = useStore();
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [addMealType, setAddMealType] = useState<MealType>('breakfast');
   const [showTargets, setShowTargets] = useState(false);
@@ -47,7 +47,19 @@ export function FoodTab() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const meals = useMemo(() => getMealsForDate(selectedDate), [mealEntries, selectedDate]);
-  const targets = getMacroTargetsForDate(selectedDate);
+  const storedTargets = getMacroTargetsForDate(selectedDate);
+  const avgWeight = useMemo(() => get7DayAvgWeight(bodyEntries, selectedDate), [bodyEntries, selectedDate]);
+
+  const targets = useMemo(() => {
+    if (!storedTargets) return undefined;
+    if (!avgWeight) return storedTargets;
+    const computed = computeMacrosFromWeight(
+      storedTargets.calories, avgWeight,
+      settings.proteinPerKg ?? 2.0, settings.fatPerKg ?? 1.0,
+      settings.fiberPerKg ?? 0.4, settings.sugarLimitG ?? 50,
+    );
+    return { ...storedTargets, ...computed };
+  }, [storedTargets, avgWeight, settings.proteinPerKg, settings.fatPerKg, settings.fiberPerKg, settings.sugarLimitG]);
 
   const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 

@@ -42,7 +42,9 @@ USER PROFILE:
 
   if (macroTargets.length > 0) {
     const currentTargets = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date))[0];
-    summary += `\nMACRO TARGETS: ${currentTargets.calories} kcal, P${currentTargets.proteinG}g C${currentTargets.carbsG}g F${currentTargets.fatG}g\n`;
+    summary += `\nMACRO TARGETS: ${currentTargets.calories} kcal target
+- Protein: ${settings.proteinPerKg ?? 2.0} g/kg, Fat: ${settings.fatPerKg ?? 1.0} g/kg, Fiber: ${settings.fiberPerKg ?? 0.4} g/kg, Sugar limit: ${settings.sugarLimitG ?? 50}g
+- Carbs fill the remaining calories after protein, fat, and fiber\n`;
   }
 
   // Body history — most recent first

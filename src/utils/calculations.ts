@@ -198,3 +198,31 @@ export function cmToIn(cm: number): number {
 export function inToCm(inches: number): number {
   return Math.round(inches * 2.54 * 10) / 10;
 }
+
+export function get7DayAvgWeight(bodyEntries: BodyEntry[], date: string): number | null {
+  const cutoff = new Date(date + 'T12:00:00');
+  cutoff.setDate(cutoff.getDate() - 7);
+  const cutoffStr = toLocalDateStr(cutoff);
+  const recent = bodyEntries.filter(e => e.date >= cutoffStr && e.date <= date);
+  if (recent.length === 0) return null;
+  return Math.round(recent.reduce((sum, e) => sum + e.weightKg, 0) / recent.length * 10) / 10;
+}
+
+export function computeMacrosFromWeight(
+  calories: number,
+  weightKg: number,
+  proteinPerKg: number,
+  fatPerKg: number,
+  fiberPerKg: number,
+  sugarLimitG: number,
+): { proteinG: number; carbsG: number; fatG: number; fiberG: number; sugarG: number } {
+  const proteinG = Math.round(weightKg * proteinPerKg * 10) / 10;
+  const fatG = Math.round(weightKg * fatPerKg * 10) / 10;
+  const fiberG = Math.round(weightKg * fiberPerKg * 10) / 10;
+  const proteinCal = proteinG * 4;
+  const fatCal = fatG * 9;
+  const fiberCal = fiberG * 2;
+  const remainingCal = Math.max(0, calories - proteinCal - fatCal - fiberCal);
+  const carbsG = Math.round(remainingCal / 4 * 10) / 10;
+  return { proteinG, carbsG, fatG, fiberG, sugarG: sugarLimitG };
+}
