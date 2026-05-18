@@ -13,7 +13,6 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Legend,
-  ReferenceLine,
 } from 'recharts';
 
 interface AnalyticsChartViewProps {
@@ -149,7 +148,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
     const span = (new Date(last).getTime() - new Date(first).getTime()) / (1000 * 60 * 60 * 24);
     const ticks: string[] = [];
 
-    if (span <= 120) {
+    if (span <= 60) {
       // Weekly: find Sundays
       const d = new Date(first + 'T12:00:00');
       d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
@@ -157,7 +156,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
         ticks.push(toLocalDateStr(d));
         d.setDate(d.getDate() + 7);
       }
-    } else {
+    } else if (span <= 365) {
       // Monthly: 1st of each month
       const startD = new Date(first + 'T12:00:00');
       const d = new Date(startD.getFullYear(), startD.getMonth() + 1, 1, 12);
@@ -165,8 +164,25 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
         ticks.push(toLocalDateStr(d));
         d.setMonth(d.getMonth() + 1);
       }
+    } else {
+      // Quarterly for very long ranges
+      const startD = new Date(first + 'T12:00:00');
+      let m = startD.getMonth();
+      const nextQ = m + (3 - (m % 3));
+      const d = new Date(startD.getFullYear(), nextQ, 1, 12);
+      while (toLocalDateStr(d) <= last) {
+        ticks.push(toLocalDateStr(d));
+        d.setMonth(d.getMonth() + 3);
+      }
     }
     return ticks;
+  }, [chartData]);
+
+  const xSpansMultipleYears = useMemo(() => {
+    if (chartData.length < 2) return false;
+    const firstYear = new Date((chartData[0].date as string) + 'T12:00:00').getFullYear();
+    const lastYear = new Date((chartData[chartData.length - 1].date as string) + 'T12:00:00').getFullYear();
+    return firstYear !== lastYear;
   }, [chartData]);
 
   if (chartData.length === 0) {
@@ -183,16 +199,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
     <div style={{ ...(fullscreen ? { width: '100%', height: '100%' } : {}), ...(interactive === false ? { pointerEvents: 'none' } : {}) }}>
       <ResponsiveContainer width="100%" height={fullscreen ? '100%' : 280}>
         <ComposedChart data={chartData} margin={{ top: 5, right: hasRightAxis ? 5 : 5, bottom: 5, left: 0 }}>
-          <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
-          {xTicks.map((tick) => (
-            <ReferenceLine
-              key={tick}
-              x={tick}
-              yAxisId="left"
-              stroke="var(--border-color)"
-              strokeDasharray="3 3"
-            />
-          ))}
+          <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" />
           <XAxis
             dataKey="date"
             ticks={xTicks.length > 0 ? xTicks : undefined}
@@ -200,7 +207,11 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
             tickFormatter={(val: string) => {
               const d = new Date(val + 'T12:00:00');
               const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-              return `${d.getDate()}-${months[d.getMonth()]}`;
+              const label = `${d.getDate()}-${months[d.getMonth()]}`;
+              if (xSpansMultipleYears) {
+                return `${label}-${String(d.getFullYear()).slice(2)}`;
+              }
+              return label;
             }}
           />
           <YAxis
