@@ -26,7 +26,6 @@ export function AnalyticsTab() {
       if (el && el.requestFullscreen) {
         try {
           await el.requestFullscreen();
-          await (screen.orientation as any)?.lock?.('landscape').catch(() => {});
         } catch {}
       }
     }, 50);
