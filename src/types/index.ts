@@ -140,7 +140,7 @@ export interface AnalyticsMetric {
   exerciseId?: string; // for one rep max
 }
 
-export type DateRangeOption = '1M' | '3M' | '6M' | '12M' | '24M' | '36M' | 'ALL';
+export type DateRangeOption = '1M' | '2M' | '3M' | '6M' | '12M' | '36M' | 'ALL';
 
 export const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
   sedentary: 1.2,

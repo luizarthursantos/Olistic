@@ -7,7 +7,7 @@ import { ChartConfigModal } from './ChartConfigModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import './AnalyticsTab.css';
 
-const DATE_RANGES: DateRangeOption[] = ['1M', '3M', '6M', '12M', '24M', '36M', 'ALL'];
+const DATE_RANGES: DateRangeOption[] = ['1M', '2M', '3M', '6M', '12M', '36M', 'ALL'];
 
 export function AnalyticsTab() {
   const { analyticsCharts, addAnalyticsChart, deleteAnalyticsChart, analyticsDateRange, setAnalyticsDateRange } = useStore();
@@ -112,7 +112,7 @@ export function AnalyticsTab() {
           {analyticsCharts.map((chart) => (
             <div key={chart.id} className="analytics-chart-wrapper">
               <div className="analytics-chart-header">
-                <h3 className="analytics-chart-title">{chart.title}</h3>
+                <h3 className="analytics-chart-title">{chart.metrics.map(m => m.label).join(' / ')}</h3>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button
                     className="btn btn-icon btn-secondary btn-sm"
@@ -166,7 +166,7 @@ export function AnalyticsTab() {
         <div className="fullscreen-chart-overlay" ref={fullscreenRef} onClick={exitFullscreen}>
           <div className="fullscreen-chart-container" onClick={(e) => e.stopPropagation()}>
             <div className="fullscreen-chart-header">
-              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{fullscreenChart.title}</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{fullscreenChart.metrics.map(m => m.label).join(' / ')}</h3>
               <button className="btn btn-icon btn-secondary btn-sm" onClick={exitFullscreen}>
                 <X size={18} />
               </button>

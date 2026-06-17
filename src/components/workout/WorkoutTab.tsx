@@ -241,7 +241,7 @@ export function WorkoutTab() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedSessions.map((session) => (
+                      {sortedSessions.slice(0, 20).map((session) => (
                         <tr key={session.id}>
                           <td style={{ width: 16, padding: '10px 4px 10px 12px' }}>
                             <div

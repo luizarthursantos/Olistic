@@ -25,7 +25,7 @@ interface AnalyticsChartViewProps {
 function getDateCutoff(range: DateRangeOption): string {
   if (range === 'ALL') return '1900-01-01';
   const now = new Date();
-  const months: Record<string, number> = { '1M': 1, '3M': 3, '6M': 6, '12M': 12, '24M': 24, '36M': 36 };
+  const months: Record<string, number> = { '1M': 1, '2M': 2, '3M': 3, '6M': 6, '12M': 12, '36M': 36 };
   now.setMonth(now.getMonth() - (months[range] || 1));
   return toLocalDateStr(now);
 }

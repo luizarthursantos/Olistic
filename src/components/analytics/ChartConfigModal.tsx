@@ -14,7 +14,6 @@ const METRIC_COLORS = ['#6c63ff', '#34d399', '#f87171', '#fbbf24', '#60a5fa', '#
 export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
   const { addAnalyticsChart, updateAnalyticsChart, exercises } = useStore();
 
-  const [title, setTitle] = useState(chart?.title || 'New Chart');
   const [metrics, setMetrics] = useState<AnalyticsMetric[]>(chart?.metrics || []);
   const [showMovingAverage, setShowMovingAverage] = useState(chart?.showMovingAverage || false);
   const [movingAverageDays, setMovingAverageDays] = useState(chart?.movingAverageDays || 7);
@@ -43,7 +42,8 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
   };
 
   const save = () => {
-    if (!title.trim() || metrics.length === 0) return;
+    if (metrics.length === 0) return;
+    const title = metrics.map(m => m.label).join(' / ');
     const data = { title, metrics, dateRange: chart?.dateRange || '6M' as const, showMovingAverage, movingAverageDays, includeZeroLeft, includeZeroRight };
     if (chart) {
       updateAnalyticsChart(chart.id, data);
@@ -69,16 +69,6 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
           <button className="btn btn-icon btn-secondary" onClick={onClose}>
             <X size={18} />
           </button>
-        </div>
-
-        <div className="form-group">
-          <label className="label">Chart Title</label>
-          <input
-            type="text"
-            className="input"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
         </div>
 
         {/* Metrics */}
@@ -201,7 +191,7 @@ export function ChartConfigModal({ chart, onClose }: ChartConfigModalProps) {
 
         <div className="modal-actions">
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={save} disabled={!title.trim() || metrics.length === 0}>
+          <button className="btn btn-primary" onClick={save} disabled={metrics.length === 0}>
             {chart ? 'Save Changes' : 'Create Chart'}
           </button>
         </div>
