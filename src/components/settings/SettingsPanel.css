@@ -1,3 +1,12 @@
+.settings-build {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+  user-select: text;
+}
+
 .settings-section {
   margin-bottom: 24px;
   padding-bottom: 24px;

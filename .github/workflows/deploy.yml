@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ['main', 'claude/holistic-health-app-DATdU', 'claude/fix-chart-caloric-balance-l2vqT']
+    branches: ['main', 'claude/holistic-health-app-DATdU', 'claude/fix-chart-caloric-balance-l2vqT', 'claude/chat-response-version-display-l7891r']
 
 permissions:
   contents: read

@@ -5,6 +5,7 @@ import { exportToXlsx, importFromXlsx } from '../../utils/xlsxIO';
 import { toLocalDateStr } from '../../utils/calculations';
 import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone, FileText } from 'lucide-react';
 import { export1rmPdf } from '../../utils/export1rmPdf';
+import { BUILD_LABEL } from '../../version';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -80,8 +81,11 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 className="modal-title" style={{ margin: 0 }}>Settings</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <h2 className="modal-title" style={{ margin: 0 }}>Settings</h2>
+            <p className="settings-build">{BUILD_LABEL}</p>
+          </div>
           <button className="btn btn-icon btn-secondary" onClick={onClose}>
             <X size={18} />
           </button>

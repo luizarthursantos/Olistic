@@ -1,5 +1,5 @@
 import { AiProvider, ClaudeModel, BodyEntry, MealEntry, WorkoutSession, WorkoutTemplate, Exercise, UserSettings, MacroTargets } from '../types';
-import { extractClaudeText } from './claudeResponse';
+import { streamClaudeText } from './claudeStream';
 import { calcBodyFatNavy, calcFFMI, calcBMR, calcTDEE, calcAge, getBestOneRepMax } from './calculations';
 
 export interface ChatMessage {
@@ -137,48 +137,54 @@ You can:
 --- USER DATA ---
 ${dataSummary}`;
 
+export interface ChatOptions {
+  /** Called with each chunk of the reply as it streams in. */
+  onText?: (chunk: string) => void;
+  signal?: AbortSignal;
+}
+
 export async function sendChatMessage(
   apiKey: string,
   provider: AiProvider,
   messages: ChatMessage[],
   dataSummary: string,
   claudeModel: ClaudeModel = 'claude-sonnet-4-6',
+  options: ChatOptions = {},
 ): Promise<string> {
   const systemPrompt = SYSTEM_PROMPT(dataSummary);
 
   if (provider === 'gemini') {
-    return geminiChat(apiKey, systemPrompt, messages);
+    return geminiChat(apiKey, systemPrompt, messages, options);
   }
-  return claudeChat(apiKey, systemPrompt, messages, claudeModel);
+  return claudeChat(apiKey, systemPrompt, messages, claudeModel, options);
 }
 
-async function claudeChat(apiKey: string, systemPrompt: string, messages: ChatMessage[], model: ClaudeModel = 'claude-sonnet-4-6'): Promise<string> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      // Models with adaptive thinking on by default spend max_tokens on
-      // thinking before writing any text, so this has to be generous.
-      model,
-      max_tokens: 16000,
-      system: systemPrompt,
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
-    }),
+function claudeChat(
+  apiKey: string,
+  systemPrompt: string,
+  messages: ChatMessage[],
+  model: ClaudeModel = 'claude-sonnet-4-6',
+  options: ChatOptions = {},
+): Promise<string> {
+  return streamClaudeText({
+    apiKey,
+    model,
+    system: systemPrompt,
+    messages,
+    // Models with adaptive thinking on by default spend max_tokens on
+    // thinking before writing any text, so this has to be generous.
+    maxTokens: 16000,
+    onText: options.onText,
+    signal: options.signal,
   });
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Claude API error (${response.status}): ${error}`);
-  }
-  const data = await response.json();
-  return extractClaudeText(data);
 }
 
-async function geminiChat(apiKey: string, systemPrompt: string, messages: ChatMessage[]): Promise<string> {
+async function geminiChat(
+  apiKey: string,
+  systemPrompt: string,
+  messages: ChatMessage[],
+  options: ChatOptions = {},
+): Promise<string> {
   const contents = [
     { role: 'user', parts: [{ text: systemPrompt + '\n\nPlease acknowledge you understand and are ready to help.' }] },
     { role: 'model', parts: [{ text: 'I understand! I have access to your health and fitness data. How can I help you today?' }] },
@@ -194,6 +200,7 @@ async function geminiChat(apiKey: string, systemPrompt: string, messages: ChatMe
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents }),
+      signal: options.signal,
     },
   );
   if (!response.ok) {
@@ -201,7 +208,9 @@ async function geminiChat(apiKey: string, systemPrompt: string, messages: ChatMe
     throw new Error(`Gemini API error (${response.status}): ${error}`);
   }
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (text) options.onText?.(text);
+  return text;
 }
 
 export { buildDataSummary };

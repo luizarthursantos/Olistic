@@ -22,9 +22,11 @@ export function AiChatTab() {
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const apiKey = settings.aiProvider === 'gemini' ? settings.geminiApiKey : settings.claudeApiKey;
 
@@ -35,7 +37,11 @@ export function AiChatTab() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
+  }, [chatMessages, streamingText]);
+
+  // Drop an in-flight request if the tab goes away, so the stream callbacks
+  // don't fire against an unmounted component.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -52,13 +58,40 @@ export function AiChatTab() {
     setChatMessages(updatedMessages);
     setInput('');
     setLoading(true);
+    setStreamingText('');
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    // Mirrors what has streamed so far, so a failure partway through can
+    // still keep the text the model already produced.
+    let streamed = '';
 
     try {
-      const reply = await sendChatMessage(apiKey, settings.aiProvider, updatedMessages, dataSummary, settings.claudeModel || 'claude-sonnet-4-6');
+      const reply = await sendChatMessage(
+        apiKey,
+        settings.aiProvider,
+        updatedMessages,
+        dataSummary,
+        settings.claudeModel || 'claude-sonnet-4-6',
+        {
+          signal: controller.signal,
+          onText: (chunk) => {
+            streamed += chunk;
+            setStreamingText(streamed);
+          },
+        },
+      );
       setChatMessages([...updatedMessages, { role: 'assistant', content: reply }]);
     } catch (err: any) {
-      setError(err.message || 'Failed to get response');
+      if (streamed.trim()) {
+        // Keep the partial answer rather than throwing it away.
+        setChatMessages([...updatedMessages, { role: 'assistant', content: streamed }]);
+      }
+      setError(err?.message || 'Failed to get response');
     } finally {
+      abortRef.current = null;
+      setStreamingText('');
       setLoading(false);
     }
   };
@@ -138,9 +171,17 @@ export function AiChatTab() {
           <div className="ai-chat-msg assistant">
             <div className="ai-chat-msg-icon"><Bot size={16} /></div>
             <div className="ai-chat-msg-content">
-              <div className="ai-typing">
-                <span /><span /><span />
-              </div>
+              {streamingText ? (
+                <>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingText}</ReactMarkdown>
+                  <span className="ai-stream-caret" />
+                </>
+              ) : (
+                <div className="ai-typing">
+                  <span /><span /><span />
+                  <span className="ai-typing-label">Thinking…</span>
+                </div>
+              )}
             </div>
           </div>
         )}

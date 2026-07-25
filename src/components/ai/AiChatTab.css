@@ -214,6 +214,7 @@
 
 .ai-typing {
   display: flex;
+  align-items: center;
   gap: 4px;
   padding: 4px 0;
 }
@@ -224,6 +225,33 @@
   border-radius: 50%;
   background: var(--text-secondary);
   animation: aiTyping 1.2s infinite ease-in-out;
+}
+
+/* Label makes it obvious the request is alive while the model thinks. */
+.ai-typing .ai-typing-label {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  animation: none;
+  margin-left: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ai-stream-caret {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  background: var(--text-secondary);
+  animation: aiCaret 1s steps(2, start) infinite;
+}
+
+@keyframes aiCaret {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .ai-typing span:nth-child(2) {
