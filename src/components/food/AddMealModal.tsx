@@ -165,7 +165,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     try {
       const breakdown = photoResultMode === 'components';
       const results = await analyzeFoodPhoto(
-        activeApiKey, base64Data, mediaType, photoDescription || undefined, aiProvider, breakdown,
+        activeApiKey, base64Data, mediaType, photoDescription || undefined, aiProvider, breakdown, settings.claudeModel || 'claude-sonnet-4-6',
       );
       setPhotoResults(results);
 
@@ -231,7 +231,7 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
     setAiResults([]);
     try {
       const breakdown = aiResultMode === 'components';
-      const results = await analyzeFoodDescription(activeApiKey, aiDescription, aiProvider, breakdown);
+      const results = await analyzeFoodDescription(activeApiKey, aiDescription, aiProvider, breakdown, settings.claudeModel || 'claude-sonnet-4-6');
       setAiResults(results);
       if (breakdown) {
         results.forEach((item) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import { ActivityLevel, ACTIVITY_LABELS, UnitSystem, AiProvider } from '../../types';
+import { ActivityLevel, ACTIVITY_LABELS, UnitSystem, AiProvider, ClaudeModel, CLAUDE_MODEL_LABELS } from '../../types';
 import { exportToXlsx, importFromXlsx } from '../../utils/xlsxIO';
 import { toLocalDateStr } from '../../utils/calculations';
 import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone, FileText } from 'lucide-react';
@@ -246,6 +246,22 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               </button>
             </div>
           </div>
+          {settings.aiProvider === 'claude' && (
+            <div className="form-group">
+              <label className="label">Claude Model</label>
+              <select
+                className="select"
+                value={settings.claudeModel || 'claude-sonnet-4-6'}
+                onChange={(e) => updateSettings({ claudeModel: e.target.value as ClaudeModel })}
+              >
+                {(Object.keys(CLAUDE_MODEL_LABELS) as ClaudeModel[]).map((model) => (
+                  <option key={model} value={model}>
+                    {CLAUDE_MODEL_LABELS[model]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="form-group">
             <label className="label"><Key size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Claude API Key</label>
             <input

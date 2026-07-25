@@ -107,6 +107,7 @@ const defaultSettings: UserSettings = {
   claudeApiKey: '',
   geminiApiKey: '',
   aiProvider: 'claude',
+  claudeModel: 'claude-sonnet-4-6',
   chartLineAlpha: 60,
   proteinPerKg: 2.0,
   fatPerKg: 1.0,

@@ -1,4 +1,4 @@
-import { AiProvider, BodyEntry, MealEntry, WorkoutSession, WorkoutTemplate, Exercise, UserSettings, MacroTargets } from '../types';
+import { AiProvider, ClaudeModel, BodyEntry, MealEntry, WorkoutSession, WorkoutTemplate, Exercise, UserSettings, MacroTargets } from '../types';
 import { calcBodyFatNavy, calcFFMI, calcBMR, calcTDEE, calcAge, getBestOneRepMax } from './calculations';
 
 export interface ChatMessage {
@@ -141,16 +141,17 @@ export async function sendChatMessage(
   provider: AiProvider,
   messages: ChatMessage[],
   dataSummary: string,
+  claudeModel: ClaudeModel = 'claude-sonnet-4-6',
 ): Promise<string> {
   const systemPrompt = SYSTEM_PROMPT(dataSummary);
 
   if (provider === 'gemini') {
     return geminiChat(apiKey, systemPrompt, messages);
   }
-  return claudeChat(apiKey, systemPrompt, messages);
+  return claudeChat(apiKey, systemPrompt, messages, claudeModel);
 }
 
-async function claudeChat(apiKey: string, systemPrompt: string, messages: ChatMessage[]): Promise<string> {
+async function claudeChat(apiKey: string, systemPrompt: string, messages: ChatMessage[], model: ClaudeModel = 'claude-sonnet-4-6'): Promise<string> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -160,7 +161,7 @@ async function claudeChat(apiKey: string, systemPrompt: string, messages: ChatMe
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model,
       max_tokens: 2048,
       system: systemPrompt,
       messages: messages.map(m => ({ role: m.role, content: m.content })),

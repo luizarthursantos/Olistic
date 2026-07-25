@@ -5,6 +5,14 @@ export type ThemeMode = 'light' | 'dark';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export type AiProvider = 'claude' | 'gemini';
+export type ClaudeModel = 'claude-sonnet-4-6' | 'claude-sonnet-5' | 'claude-opus-5' | 'claude-haiku-4-5';
+
+export const CLAUDE_MODEL_LABELS: Record<ClaudeModel, string> = {
+  'claude-sonnet-4-6': 'Claude Sonnet 4.6',
+  'claude-sonnet-5': 'Claude Sonnet 5',
+  'claude-opus-5': 'Claude Opus 5',
+  'claude-haiku-4-5': 'Claude Haiku 4.5',
+};
 
 export interface UserSettings {
   birthday: string; // ISO date
@@ -20,6 +28,7 @@ export interface UserSettings {
   claudeApiKey: string;
   geminiApiKey: string;
   aiProvider: AiProvider;
+  claudeModel: ClaudeModel;
   chartLineAlpha: number; // 0-100, line opacity % when moving average enabled
   proteinPerKg: number;
   fatPerKg: number;

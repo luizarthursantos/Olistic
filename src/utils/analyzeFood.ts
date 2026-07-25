@@ -1,4 +1,4 @@
-import { AiProvider } from '../types';
+import { AiProvider, ClaudeModel } from '../types';
 
 export interface FoodAnalysisResult {
   name: string;
@@ -71,7 +71,7 @@ function parseResults(text: string): FoodAnalysisResult[] {
 
 // ── Claude ──
 
-async function claudeTextRequest(apiKey: string, prompt: string): Promise<string> {
+async function claudeTextRequest(apiKey: string, prompt: string, model: ClaudeModel = 'claude-sonnet-4-6'): Promise<string> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -81,7 +81,7 @@ async function claudeTextRequest(apiKey: string, prompt: string): Promise<string
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model,
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -99,6 +99,7 @@ async function claudePhotoRequest(
   imageBase64: string,
   mediaType: string,
   prompt: string,
+  model: ClaudeModel = 'claude-sonnet-4-6',
 ): Promise<string> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -109,7 +110,7 @@ async function claudePhotoRequest(
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model,
       max_tokens: 1024,
       messages: [{
         role: 'user',
@@ -188,11 +189,12 @@ export async function analyzeFoodDescription(
   description: string,
   provider: AiProvider = 'claude',
   breakdown = false,
+  claudeModel: ClaudeModel = 'claude-sonnet-4-6',
 ): Promise<FoodAnalysisResult[]> {
   const prompt = FOOD_DESCRIPTION_PROMPT(description, breakdown);
   const text = provider === 'gemini'
     ? await geminiTextRequest(apiKey, prompt)
-    : await claudeTextRequest(apiKey, prompt);
+    : await claudeTextRequest(apiKey, prompt, claudeModel);
   return parseResults(text);
 }
 
@@ -203,6 +205,7 @@ export async function analyzeFoodPhoto(
   description?: string,
   provider: AiProvider = 'claude',
   breakdown = false,
+  claudeModel: ClaudeModel = 'claude-sonnet-4-6',
 ): Promise<FoodAnalysisResult[]> {
   const descriptionHint = description
     ? `\n\nThe user provided this description of the image: "${description}". Use this to improve your analysis.`
@@ -210,6 +213,6 @@ export async function analyzeFoodPhoto(
   const prompt = FOOD_PHOTO_PROMPT(descriptionHint, breakdown);
   const text = provider === 'gemini'
     ? await geminiPhotoRequest(apiKey, imageBase64, mediaType, prompt)
-    : await claudePhotoRequest(apiKey, imageBase64, mediaType, prompt);
+    : await claudePhotoRequest(apiKey, imageBase64, mediaType, prompt, claudeModel);
   return parseResults(text);
 }
