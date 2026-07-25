@@ -1,4 +1,5 @@
 import { AiProvider, ClaudeModel, BodyEntry, MealEntry, WorkoutSession, WorkoutTemplate, Exercise, UserSettings, MacroTargets } from '../types';
+import { extractClaudeText } from './claudeResponse';
 import { calcBodyFatNavy, calcFFMI, calcBMR, calcTDEE, calcAge, getBestOneRepMax } from './calculations';
 
 export interface ChatMessage {
@@ -161,8 +162,10 @@ async function claudeChat(apiKey: string, systemPrompt: string, messages: ChatMe
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
+      // Models with adaptive thinking on by default spend max_tokens on
+      // thinking before writing any text, so this has to be generous.
       model,
-      max_tokens: 2048,
+      max_tokens: 16000,
       system: systemPrompt,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
     }),
@@ -172,7 +175,7 @@ async function claudeChat(apiKey: string, systemPrompt: string, messages: ChatMe
     throw new Error(`Claude API error (${response.status}): ${error}`);
   }
   const data = await response.json();
-  return data.content?.find((b: any) => b.type === 'text')?.text || '';
+  return extractClaudeText(data);
 }
 
 async function geminiChat(apiKey: string, systemPrompt: string, messages: ChatMessage[]): Promise<string> {

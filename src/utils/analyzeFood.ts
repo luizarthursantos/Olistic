@@ -1,4 +1,5 @@
 import { AiProvider, ClaudeModel } from '../types';
+import { extractClaudeText } from './claudeResponse';
 
 export interface FoodAnalysisResult {
   name: string;
@@ -82,7 +83,8 @@ async function claudeTextRequest(apiKey: string, prompt: string, model: ClaudeMo
     },
     body: JSON.stringify({
       model,
-      max_tokens: 1024,
+      // Thinking tokens share this budget on adaptive-thinking models.
+      max_tokens: 8000,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
@@ -91,7 +93,7 @@ async function claudeTextRequest(apiKey: string, prompt: string, model: ClaudeMo
     throw new Error(`Claude API error (${response.status}): ${error}`);
   }
   const data = await response.json();
-  return data.content?.find((b: any) => b.type === 'text')?.text || '';
+  return extractClaudeText(data);
 }
 
 async function claudePhotoRequest(
@@ -111,7 +113,8 @@ async function claudePhotoRequest(
     },
     body: JSON.stringify({
       model,
-      max_tokens: 1024,
+      // Thinking tokens share this budget on adaptive-thinking models.
+      max_tokens: 8000,
       messages: [{
         role: 'user',
         content: [
@@ -129,7 +132,7 @@ async function claudePhotoRequest(
     throw new Error(`Claude API error (${response.status}): ${error}`);
   }
   const data = await response.json();
-  return data.content?.find((b: any) => b.type === 'text')?.text || '';
+  return extractClaudeText(data);
 }
 
 // ── Gemini ──
