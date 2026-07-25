@@ -91,7 +91,7 @@ async function claudeTextRequest(apiKey: string, prompt: string, model: ClaudeMo
     throw new Error(`Claude API error (${response.status}): ${error}`);
   }
   const data = await response.json();
-  return data.content?.[0]?.text || '';
+  return data.content?.find((b: any) => b.type === 'text')?.text || '';
 }
 
 async function claudePhotoRequest(
@@ -129,7 +129,7 @@ async function claudePhotoRequest(
     throw new Error(`Claude API error (${response.status}): ${error}`);
   }
   const data = await response.json();
-  return data.content?.[0]?.text || '';
+  return data.content?.find((b: any) => b.type === 'text')?.text || '';
 }
 
 // ── Gemini ──

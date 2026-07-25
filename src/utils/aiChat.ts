@@ -172,7 +172,7 @@ async function claudeChat(apiKey: string, systemPrompt: string, messages: ChatMe
     throw new Error(`Claude API error (${response.status}): ${error}`);
   }
   const data = await response.json();
-  return data.content?.[0]?.text || '';
+  return data.content?.find((b: any) => b.type === 'text')?.text || '';
 }
 
 async function geminiChat(apiKey: string, systemPrompt: string, messages: ChatMessage[]): Promise<string> {
