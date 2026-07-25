@@ -28,6 +28,12 @@ export interface ClaudeStreamRequest {
   system?: string;
   messages: { role: 'user' | 'assistant'; content: string }[];
   maxTokens: number;
+  /**
+   * Marks the system prompt as cacheable. Worth it when the same large prompt
+   * is resent turn after turn — the chat's data summary is tens of thousands
+   * of tokens and only changes when the user logs something new.
+   */
+  cacheSystem?: boolean;
   /** Called with each chunk of answer text as it arrives. */
   onText?: (chunk: string) => void;
   signal?: AbortSignal;
@@ -80,7 +86,7 @@ export async function streamClaudeText(req: ClaudeStreamRequest): Promise<string
         model: req.model,
         max_tokens: req.maxTokens,
         stream: true,
-        ...(req.system ? { system: req.system } : {}),
+        ...(req.system ? { system: buildSystem(req.system, req.cacheSystem) } : {}),
         messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
       }),
     });
@@ -163,6 +169,16 @@ export async function streamClaudeText(req: ClaudeStreamRequest): Promise<string
     if (watchdog) clearTimeout(watchdog);
     req.signal?.removeEventListener('abort', abortOuter);
   }
+}
+
+/**
+ * Caching needs the block form of `system`. A prompt below the model's
+ * minimum cacheable length is simply not cached — the API does not error —
+ * so the flag is safe to set unconditionally.
+ */
+function buildSystem(system: string, cache?: boolean) {
+  if (!cache) return system;
+  return [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }];
 }
 
 /** Pulls the JSON payload out of one `event:`/`data:` SSE frame. */
