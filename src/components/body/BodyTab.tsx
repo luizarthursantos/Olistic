@@ -179,7 +179,7 @@ export function BodyTab() {
             <div className="stat-card-label">Body Fat (Navy)</div>
           </div>
           <div className="stat-card">
-            <div className="stat-card-value">{stats.ffmi}</div>
+            <div className="stat-card-value">{stats.ffmi.toFixed(2)}</div>
             <div className="stat-card-label">FFMI</div>
           </div>
           <div className="stat-card">
@@ -348,7 +348,7 @@ export function BodyTab() {
             {formNum.waistCm > formNum.neckCm && (
               <div className="body-preview">
                 <span>Body Fat: {calcBodyFatNavy(settings.sex, formNum.waistCm, formNum.neckCm, settings.heightCm)}%</span>
-                <span>FFMI: {calcFFMI(formNum.weightKg, calcBodyFatNavy(settings.sex, formNum.waistCm, formNum.neckCm, settings.heightCm), settings.heightCm)}</span>
+                <span>FFMI: {calcFFMI(formNum.weightKg, calcBodyFatNavy(settings.sex, formNum.waistCm, formNum.neckCm, settings.heightCm), settings.heightCm).toFixed(2)}</span>
               </div>
             )}
 

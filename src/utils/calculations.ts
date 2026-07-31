@@ -50,8 +50,9 @@ export function calcFFMI(weightKg: number, bodyFatPct: number, heightCm: number)
   const heightM = heightCm / 100;
   const leanMassKg = weightKg * (1 - bodyFatPct / 100);
   const ffmi = leanMassKg / (heightM * heightM);
-  // Normalized FFMI (adjusted to 1.8m)
-  return Math.round((ffmi + 6.1 * (1.8 - heightM)) * 10) / 10;
+  // Normalized FFMI (adjusted to 1.8m). Two decimals: FFMI moves slowly, so a
+  // single decimal hides real week-to-week change.
+  return Math.round((ffmi + 6.1 * (1.8 - heightM)) * 100) / 100;
 }
 
 /**

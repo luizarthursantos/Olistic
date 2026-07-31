@@ -180,7 +180,7 @@ USER PROFILE:
     summary += `\nCURRENT STATUS (from latest body entry, ${latest.date}):
 - Weight: ${weight} kg${avg7 ? ` (7-day avg: ${avg7} kg)` : ''}, Waist: ${resolve(latest, 'waistCm')} cm, Neck: ${resolve(latest, 'neckCm')} cm
 - Body fat: ${bf}% (target ${settings.targetBodyFatPct}%, ${fmtGap(bf - num(settings.targetBodyFatPct), 'pp above', 'pp below')})
-- FFMI: ${ffmi} (target ${settings.targetFFMI}, ${fmtGap(num(settings.targetFFMI) - ffmi, 'to gain', 'above target')})
+- FFMI: ${ffmi.toFixed(2)} (target ${settings.targetFFMI}, ${fmtGap(num(settings.targetFFMI) - ffmi, 'to gain', 'above target', 2)})
 - BMR: ${bmr} kcal, TDEE at rest: ${tdee} kcal (before workout calories)\n`;
   }
 
@@ -250,7 +250,7 @@ date | wt | wt7d | bf% | ffmi | in | tgt | out | bal | P | Ptgt | C | F | sug | 
         cell(num(entry?.weightKg), 1),
         cell(get7DayAvgWeight(bodyEntries, date) ?? 0, 1),
         cell(bf, 1),
-        cell(ffmi, 1),
+        cell(ffmi, 2),
         cell(eaten.cal),
         cell(num(targets?.calories)),
         cell(out),
@@ -371,10 +371,12 @@ date | wt | wt7d | bf% | ffmi | in | tgt | out | bal | P | Ptgt | C | F | sug | 
 }
 
 /** "2.4 pp above" / "on target" — for stating distance to a goal. */
-function fmtGap(delta: number, over: string, under: string): string {
-  const rounded = Math.round(delta * 10) / 10;
+function fmtGap(delta: number, over: string, under: string, places = 1): string {
+  const f = Math.pow(10, places);
+  const rounded = Math.round(delta * f) / f;
   if (rounded === 0) return 'on target';
-  return rounded > 0 ? `${rounded} ${over}` : `${Math.abs(rounded)} ${under}`;
+  const magnitude = Math.abs(rounded).toFixed(places);
+  return rounded > 0 ? `${magnitude} ${over}` : `${magnitude} ${under}`;
 }
 
 const SYSTEM_PROMPT = (dataSummary: string) =>

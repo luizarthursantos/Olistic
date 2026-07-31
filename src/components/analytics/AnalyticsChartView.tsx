@@ -30,6 +30,12 @@ function getDateCutoff(range: DateRangeOption): string {
   return toLocalDateStr(now);
 }
 
+/** Axis label: compact above 1k, otherwise at the precision the step implies. */
+function formatTick(v: number, decimals: number): string {
+  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
+  return v.toFixed(decimals);
+}
+
 export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }: AnalyticsChartViewProps) {
   const state = useStore();
   const lineAlphaHex = Math.round(((state.settings.chartLineAlpha ?? 60) / 100) * 255)
@@ -101,7 +107,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
       .filter((m) => m.axis === 'right')
       .flatMap((m) => [m.key, chart.showMovingAverage ? `${m.key}_ma` : null].filter(Boolean) as string[]);
 
-    const niceTicks = (keys: string[], includeZero: boolean): { domain: [number, number]; ticks: number[] } | undefined => {
+    const niceTicks = (keys: string[], includeZero: boolean): { domain: [number, number]; ticks: number[]; decimals: number } | undefined => {
       const values: number[] = [];
       chartData.forEach((point) => {
         keys.forEach((k) => {
@@ -118,12 +124,17 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
       }
       const range = dataMax - dataMin || Math.abs(dataMax) * 0.1 || 1;
 
-      // Pick a step that is a clean integer (never < 1)
+      // Pick a clean 1/2/5 step. Steps below 1 are allowed: metrics like FFMI
+      // and body fat % move within a couple of units, and clamping the step to
+      // an integer collapsed their axis to a single repeated label.
       const targetTicks = 5;
       const rawStep = range / targetTicks;
-      const magnitude = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1))));
+      const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
       const candidates = [1, 2, 5, 10].map((m) => m * magnitude);
-      const step = Math.max(1, candidates.find((c) => c >= rawStep) || candidates[candidates.length - 1]);
+      const step = candidates.find((c) => c >= rawStep) || candidates[candidates.length - 1];
+
+      // Label with just enough precision to tell neighbouring ticks apart.
+      const decimals = Math.min(2, Math.max(0, -Math.floor(Math.log10(step))));
 
       const lo = Math.floor(dataMin / step) * step;
       const hi = Math.ceil(dataMax / step) * step;
@@ -131,7 +142,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
       for (let v = lo; v <= hi + step * 0.01; v += step) {
         ticks.push(Math.round(v * 1e6) / 1e6);
       }
-      return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+      return { domain: [ticks[0], ticks[ticks.length - 1]], ticks, decimals };
     };
 
     return {
@@ -220,7 +231,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
             width={40}
             domain={axisConfig.left?.domain || ['auto', 'auto']}
             ticks={axisConfig.left?.ticks}
-            tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v))}
+            tickFormatter={(v: number) => formatTick(v, axisConfig.left?.decimals ?? 0)}
           />
           {hasRightAxis && (
             <YAxis
@@ -230,7 +241,7 @@ export function AnalyticsChartView({ chart, dateRange, fullscreen, interactive }
               width={40}
               domain={axisConfig.right?.domain || ['auto', 'auto']}
               ticks={axisConfig.right?.ticks}
-              tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v))}
+              tickFormatter={(v: number) => formatTick(v, axisConfig.right?.decimals ?? 0)}
             />
           )}
           {interactive !== false && (
