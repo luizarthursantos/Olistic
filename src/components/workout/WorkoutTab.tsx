@@ -53,12 +53,6 @@ export function WorkoutTab() {
   const isOrphaned = (templateId: string) =>
     !workoutTemplates.some((t) => t.id === templateId);
 
-  const orphanedCount = useMemo(
-    () => workoutSessions.filter((s) => isOrphaned(s.templateId)).length,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workoutSessions, workoutTemplates],
-  );
-
   const setArchived = (templateId: string, archived: boolean) => {
     updateWorkoutTemplate(templateId, { archived });
     setDeleteConfirm(null);
@@ -311,13 +305,6 @@ export function WorkoutTab() {
                 </button>
               )}
             </div>
-            {orphanedCount > 0 && (
-              <p className="text-sm text-muted" style={{ marginTop: -4, marginBottom: 12 }}>
-                {orphanedCount} {orphanedCount === 1 ? 'session lost its' : 'sessions lost their'} workout
-                {orphanedCount === 1 ? '' : 's'} to a deletion. Tap Edit to reassign
-                {orphanedCount === 1 ? ' it' : ' them'}.
-              </p>
-            )}
             {sortedSessions.length === 0 ? (
               <div className="empty-state" style={{ padding: '30px 20px' }}>
                 <p className="text-muted">No workouts completed yet</p>
