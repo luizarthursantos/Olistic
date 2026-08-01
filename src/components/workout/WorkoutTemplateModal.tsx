@@ -18,6 +18,7 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
     template?.exercises || []
   );
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [exerciseQuery, setExerciseQuery] = useState('');
   const [newExerciseName, setNewExerciseName] = useState('');
   const [newExerciseIsCardio, setNewExerciseIsCardio] = useState(false);
   const [showCreateExercise, setShowCreateExercise] = useState(false);
@@ -27,6 +28,16 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
   const [editExIcon, setEditExIcon] = useState('');
   const [editExCardio, setEditExCardio] = useState(false);
   const [deleteExConfirm, setDeleteExConfirm] = useState<string | null>(null);
+
+  const filteredExercises = exercises.filter((e) =>
+    e.name.toLowerCase().includes(exerciseQuery.trim().toLowerCase())
+  );
+
+  const openExercisePicker = () => {
+    setExerciseQuery('');
+    setShowCreateExercise(false);
+    setShowExercisePicker(true);
+  };
 
   const addExerciseToTemplate = (exercise: Exercise) => {
     setTemplateExercises([
@@ -170,7 +181,7 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <label className="label" style={{ margin: 0 }}>Exercises</label>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowExercisePicker(true)}>
+            <button className="btn btn-primary btn-sm" onClick={openExercisePicker}>
               <Plus size={14} /> Add Exercise
             </button>
           </div>
@@ -306,8 +317,17 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
                   </button>
                 </div>
               </div>
+              <input
+                type="text"
+                className="input"
+                placeholder="Search exercises..."
+                value={exerciseQuery}
+                onChange={(e) => setExerciseQuery(e.target.value)}
+                autoFocus
+                style={{ width: '100%', marginBottom: 8 }}
+              />
               <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                {exercises.map((exercise) => (
+                {filteredExercises.map((exercise) => (
                   <div
                     key={exercise.id}
                     style={{
@@ -360,10 +380,23 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
                     )}
                   </div>
                 ))}
+                {filteredExercises.length === 0 && (
+                  <p className="text-sm text-muted" style={{ padding: '12px 0', margin: 0 }}>
+                    No exercise matches "{exerciseQuery.trim()}".
+                  </p>
+                )}
               </div>
               <div style={{ marginTop: 12 }}>
                 {!showCreateExercise ? (
-                  <button className="btn btn-secondary btn-sm" onClick={() => setShowCreateExercise(true)}>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      // Searching for something that doesn't exist yet is the
+                      // usual way into this form, so start from the query.
+                      if (!newExerciseName.trim()) setNewExerciseName(exerciseQuery.trim());
+                      setShowCreateExercise(true);
+                    }}
+                  >
                     <Plus size={14} /> Create Custom Exercise
                   </button>
                 ) : (
