@@ -1,4 +1,7 @@
-const CACHE_NAME = 'olistic-v5';
+// Stamped with the build id at build time (see vite.config.ts). A per-build
+// cache name means activating a new worker drops the previous build's entries,
+// so a momentary network failure can never fall back to a months-old bundle.
+const CACHE_NAME = 'olistic-__BUILD_ID__';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
