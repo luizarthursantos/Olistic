@@ -95,6 +95,11 @@ export interface WorkoutTemplate {
   name: string;
   color: string;
   exercises: WorkoutExerciseTemplate[];
+  /**
+   * Retired from the workout list but kept so past sessions can still resolve
+   * their name. Deleting a template instead orphans its history.
+   */
+  archived?: boolean;
 }
 
 export interface WorkoutExerciseTemplate {

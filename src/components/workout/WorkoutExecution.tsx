@@ -533,13 +533,17 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
       ))}
 
       {preview ? (
-        <button
-          className="btn btn-primary"
-          style={{ width: '100%', marginTop: 16, padding: 14, fontSize: 16 }}
-          onClick={() => onStart?.()}
-        >
-          <Play size={18} /> Start Workout
-        </button>
+        // Omitting onStart makes the preview read-only — used for archived
+        // templates, which are kept for history but not meant to be run.
+        onStart && (
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', marginTop: 16, padding: 14, fontSize: 16 }}
+            onClick={onStart}
+          >
+            <Play size={18} /> Start Workout
+          </button>
+        )
       ) : isViewingCompleted ? (
         <button
           className="btn btn-primary"

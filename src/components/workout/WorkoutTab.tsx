@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
-import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye, Pencil, TrendingUp } from 'lucide-react';
+import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye, Pencil, TrendingUp, Archive, ArchiveRestore } from 'lucide-react';
 import { WorkoutTemplate, WorkoutSession } from '../../types';
 import { WorkoutTemplateModal } from './WorkoutTemplateModal';
 import { WorkoutExecution } from './WorkoutExecution';
@@ -15,7 +15,9 @@ export function WorkoutTab() {
   const {
     workoutTemplates,
     workoutSessions,
+    updateWorkoutTemplate,
     deleteWorkoutTemplate,
+    updateWorkoutSession,
     deleteWorkoutSession,
     exercises,
   } = useStore();
@@ -29,10 +31,38 @@ export function WorkoutTab() {
   const [editModeHistory, setEditModeHistory] = useState(false);
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'template' | 'session'; id: string } | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const sortedSessions = useMemo(() => {
     return [...workoutSessions].sort((a, b) => b.date.localeCompare(a.date));
   }, [workoutSessions]);
+
+  const activeTemplates = useMemo(
+    () => workoutTemplates.filter((t) => !t.archived),
+    [workoutTemplates],
+  );
+  const archivedTemplates = useMemo(
+    () => workoutTemplates.filter((t) => t.archived),
+    [workoutTemplates],
+  );
+
+  const sessionCount = (templateId: string) =>
+    workoutSessions.filter((s) => s.templateId === templateId).length;
+
+  /** True when the session's template was deleted, so its name is lost. */
+  const isOrphaned = (templateId: string) =>
+    !workoutTemplates.some((t) => t.id === templateId);
+
+  const orphanedCount = useMemo(
+    () => workoutSessions.filter((s) => isOrphaned(s.templateId)).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [workoutSessions, workoutTemplates],
+  );
+
+  const setArchived = (templateId: string, archived: boolean) => {
+    updateWorkoutTemplate(templateId, { archived });
+    setDeleteConfirm(null);
+  };
 
   const startWorkout = (templateId: string) => {
     setStartTemplateId(templateId);
@@ -63,13 +93,15 @@ export function WorkoutTab() {
 
   // If previewing a workout template
   if (previewTemplateId) {
+    const isArchived = !!workoutTemplates.find((t) => t.id === previewTemplateId)?.archived;
     return (
       <WorkoutExecution
         key="preview"
         templateId={previewTemplateId}
         preview
         onFinish={() => setPreviewTemplateId(null)}
-        onStart={() => {
+        // Archived templates are viewable but not runnable; restore first.
+        onStart={isArchived ? undefined : () => {
           const id = previewTemplateId;
           setPreviewTemplateId(null);
           startWorkout(id);
@@ -133,7 +165,7 @@ export function WorkoutTab() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600 }}>My Workouts</h3>
               <div style={{ display: 'flex', gap: 6 }}>
-                {workoutTemplates.length > 0 && (
+                {activeTemplates.length > 0 && (
                   <button
                     className={`btn btn-sm ${editModeTemplates ? 'btn-primary' : 'btn-secondary'}`}
                     onClick={() => setEditModeTemplates(!editModeTemplates)}
@@ -150,13 +182,17 @@ export function WorkoutTab() {
               </div>
             </div>
 
-            {workoutTemplates.length === 0 ? (
+            {activeTemplates.length === 0 ? (
               <div className="empty-state" style={{ padding: '30px 20px' }}>
-                <p className="text-muted">Create your first workout template</p>
+                <p className="text-muted">
+                  {archivedTemplates.length > 0
+                    ? 'No active workouts — restore one from Archived below.'
+                    : 'Create your first workout template'}
+                </p>
               </div>
             ) : (
               <div className="workout-templates-grid">
-                {workoutTemplates.map((template) => (
+                {activeTemplates.map((template) => (
                   <div key={template.id} className="workout-template-card">
                     <div
                       className="workout-template-color"
@@ -195,6 +231,13 @@ export function WorkoutTab() {
                             <Edit3 size={14} />
                           </button>
                           <button
+                            className="btn btn-icon btn-secondary btn-sm"
+                            onClick={() => setArchived(template.id, true)}
+                            title="Archive — hides it here but keeps your history"
+                          >
+                            <Archive size={14} />
+                          </button>
+                          <button
                             className="btn btn-icon btn-danger btn-sm"
                             onClick={() => setDeleteConfirm({ type: 'template', id: template.id })}
                           >
@@ -205,6 +248,52 @@ export function WorkoutTab() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Archived templates — retired from the list, still naming history */}
+            {archivedTemplates.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowArchived(!showArchived)}
+                >
+                  <Archive size={14} /> Archived ({archivedTemplates.length})
+                </button>
+                {showArchived && (
+                  <div className="workout-templates-grid" style={{ marginTop: 8 }}>
+                    {archivedTemplates.map((template) => (
+                      <div key={template.id} className="workout-template-card workout-template-archived">
+                        <div className="workout-template-color" style={{ background: template.color }} />
+                        <div
+                          className="workout-template-info"
+                          onClick={() => setPreviewTemplateId(template.id)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <h4>{template.name}</h4>
+                          <p className="text-sm text-muted">
+                            {template.exercises.length} exercises · {sessionCount(template.id)} logged
+                          </p>
+                        </div>
+                        <div className="workout-template-actions">
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setArchived(template.id, false)}
+                            title="Restore to My Workouts"
+                          >
+                            <ArchiveRestore size={14} /> Restore
+                          </button>
+                          <button
+                            className="btn btn-icon btn-danger btn-sm"
+                            onClick={() => setDeleteConfirm({ type: 'template', id: template.id })}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -222,6 +311,13 @@ export function WorkoutTab() {
                 </button>
               )}
             </div>
+            {orphanedCount > 0 && (
+              <p className="text-sm text-muted" style={{ marginTop: -4, marginBottom: 12 }}>
+                {orphanedCount} {orphanedCount === 1 ? 'session lost its' : 'sessions lost their'} workout
+                {orphanedCount === 1 ? '' : 's'} to a deletion. Tap Edit to reassign
+                {orphanedCount === 1 ? ' it' : ' them'}.
+              </p>
+            )}
             {sortedSessions.length === 0 ? (
               <div className="empty-state" style={{ padding: '30px 20px' }}>
                 <p className="text-muted">No workouts completed yet</p>
@@ -249,7 +345,30 @@ export function WorkoutTab() {
                               style={{ background: getTemplateColor(session.templateId) }}
                             />
                           </td>
-                          <td style={{ fontWeight: 500 }}>{getTemplateName(session.templateId)}</td>
+                          <td style={{ fontWeight: 500 }}>
+                            {/* A session whose template was deleted can be
+                                re-pointed at an existing one, which is the
+                                only way to recover an orphaned name. */}
+                            {editModeHistory && isOrphaned(session.templateId) && workoutTemplates.length > 0 ? (
+                              <select
+                                className="select"
+                                value=""
+                                style={{ fontSize: 12, padding: '4px 6px', minWidth: 110 }}
+                                onChange={(e) => {
+                                  if (e.target.value) updateWorkoutSession(session.id, { templateId: e.target.value });
+                                }}
+                              >
+                                <option value="">Reassign…</option>
+                                {workoutTemplates.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.name}{t.archived ? ' (archived)' : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              getTemplateName(session.templateId)
+                            )}
+                          </td>
                           <td>{session.date.slice(8,10)}-{session.date.slice(5,7)}-{session.date.slice(2,4)}</td>
                           <td>{session.estimatedCalories > 0 ? session.estimatedCalories : '-'}</td>
                           <td>
@@ -312,17 +431,43 @@ export function WorkoutTab() {
         />
       )}
 
-      {deleteConfirm && (
-        <ConfirmDialog
-          message={
-            deleteConfirm.type === 'template'
-              ? 'Are you sure you want to delete this workout template?'
-              : 'Are you sure you want to delete this workout session?'
-          }
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeleteConfirm(null)}
-        />
-      )}
+      {deleteConfirm && (() => {
+        if (deleteConfirm.type === 'session') {
+          return (
+            <ConfirmDialog
+              message="Are you sure you want to delete this workout session?"
+              onConfirm={handleDeleteConfirm}
+              onCancel={() => setDeleteConfirm(null)}
+            />
+          );
+        }
+
+        // Deleting a template that history points at is what turns past
+        // sessions into "Unknown Workout", so spell that out and put archiving
+        // in front of it.
+        const template = workoutTemplates.find((t) => t.id === deleteConfirm.id);
+        const used = sessionCount(deleteConfirm.id);
+        const name = template?.name ?? 'this workout';
+        return (
+          <ConfirmDialog
+            message={
+              used > 0
+                ? `${used} logged ${used === 1 ? 'session uses' : 'sessions use'} "${name}".\n\n`
+                  + 'Deleting it makes them show as "Unknown Workout" in your history, and the name cannot be recovered.\n\n'
+                  + 'Archiving hides it from My Workouts but keeps your history readable.'
+                : `Delete "${name}"? No logged sessions use it.`
+            }
+            confirmLabel={used > 0 ? 'Delete anyway' : 'Delete'}
+            secondaryAction={
+              used > 0 && !template?.archived
+                ? { label: 'Archive instead', onClick: () => setArchived(deleteConfirm.id, true) }
+                : undefined
+            }
+            onConfirm={handleDeleteConfirm}
+            onCancel={() => setDeleteConfirm(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
