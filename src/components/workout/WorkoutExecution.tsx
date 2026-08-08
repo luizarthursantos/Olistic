@@ -301,6 +301,17 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     setReplaceExerciseIdx(null);
   };
 
+  /**
+   * Stores the empty string rather than undefined when a note is cleared:
+   * undefined is the marker that a session predates stored notes, so it would
+   * be refilled from the template on the next load and the deletion undone.
+   */
+  const updateExerciseNote = (exIndex: number, note: string) => {
+    setExerciseSessions((current) =>
+      current.map((exSession, i) => (i === exIndex ? { ...exSession, note } : exSession)),
+    );
+  };
+
   const moveExerciseInSession = (exIndex: number, direction: -1 | 1) => {
     const target = exIndex + direction;
     setExerciseSessions((current) => {
@@ -606,9 +617,17 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
           })()}
 
           {/* Sessions saved before notes were stored fall back to the template. */}
-          {(exSession.note ?? templateNotes[exSession.exerciseId]) && (
+          {editingExercises ? (
+            <input
+              type="text"
+              className="input exercise-note-input"
+              value={exSession.note ?? templateNotes[exSession.exerciseId] ?? ''}
+              onChange={(e) => updateExerciseNote(exIdx, e.target.value)}
+              placeholder="Note for this exercise"
+            />
+          ) : (exSession.note ?? templateNotes[exSession.exerciseId]) ? (
             <div className="exercise-note">{exSession.note ?? templateNotes[exSession.exerciseId]}</div>
-          )}
+          ) : null}
 
           {isCardio(exSession.exerciseId) ? (
             <div className="cardio-input-row">
