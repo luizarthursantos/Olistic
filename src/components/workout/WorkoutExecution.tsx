@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../../store/useStore';
-import { WorkoutSet, WorkoutExerciseSession } from '../../types';
+import { WorkoutSet, WorkoutExerciseSession, Exercise } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr, getBestOneRepMax } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil, TrendingUp, X } from 'lucide-react';
+import { ExercisePicker } from './ExercisePicker';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import {
   LineChart,
   Line,
@@ -90,7 +92,10 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   const [elapsed, setElapsed] = useState(0);
   const [editSets, setEditSets] = useState(false);
   const [chartExerciseId, setChartExerciseId] = useState<string | null>(null);
+  const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [removeExerciseIdx, setRemoveExerciseIdx] = useState<number | null>(null);
   const finishedRef = useRef(false);
+  const sessionCreatedRef = useRef(false);
 
   // Build 1RM chart data for a given exercise across all workouts
   const getExerciseChartData = (exerciseId: string) => {
@@ -137,9 +142,15 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     return sorted[0]?.weightKg || 75;
   }, [bodyEntries]);
 
-  // Initialize session if new (not for viewing completed sessions or preview)
+  // Initialize session if new (not for viewing completed sessions or preview).
+  // The ref guard matters because setSessionId does not apply before this
+  // effect can run a second time: StrictMode's double invocation in dev
+  // otherwise creates a second, orphaned in-progress session that lingers in
+  // History and shadows the real one.
   useEffect(() => {
+    if (sessionCreatedRef.current) return;
     if (!sessionId && template && !isViewingCompleted && !preview) {
+      sessionCreatedRef.current = true;
       const today = toLocalDateStr(new Date());
       const id = addWorkoutSession({
         templateId,
@@ -200,6 +211,46 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
       };
       return updated;
     });
+  };
+
+  /**
+   * Adds an exercise to this session only — the template is left alone, so a
+   * one-off substitution does not silently rewrite the routine.
+   */
+  const addExerciseToSession = (exercise: Exercise) => {
+    const prev = latestExerciseData.get(exercise.id);
+    setExerciseSessions((current) => {
+      if (exercise.isCardio) {
+        const minutes = prev?.cardioMinutes ?? 10;
+        return [...current, {
+          exerciseId: exercise.id,
+          sets: [],
+          cardioMinutes: minutes,
+          estimatedCalories: estimateCardioCalories(latestWeight, minutes, exercise.name),
+        }];
+      }
+      // Start from the last time this exercise was done, so the numbers are
+      // already close; otherwise three blank sets.
+      const prevSets = prev?.sets ?? [];
+      const sets: WorkoutSet[] = prevSets.length > 0
+        ? prevSets.map((s) => ({ reps: s.reps, loadKg: s.loadKg, completed: false }))
+        : Array.from({ length: 3 }, () => ({ reps: 10, loadKg: 0, completed: false }));
+      return [...current, { exerciseId: exercise.id, sets }];
+    });
+    setShowExercisePicker(false);
+  };
+
+  const removeExerciseFromSession = (exIndex: number) => {
+    setExerciseSessions((current) => current.filter((_, i) => i !== exIndex));
+    setRemoveExerciseIdx(null);
+  };
+
+  /** Removing logged work should be confirmed; removing an untouched one should not. */
+  const requestRemoveExercise = (exIndex: number) => {
+    const exSession = exerciseSessions[exIndex];
+    const hasWork = exSession.sets.some((s) => s.completed) || !!exSession.cardioMinutes;
+    if (hasWork) setRemoveExerciseIdx(exIndex);
+    else removeExerciseFromSession(exIndex);
   };
 
   const updateCardioMinutes = (exIndex: number, minutes: number) => {
@@ -389,6 +440,15 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
                 <TrendingUp size={14} />
               </button>
             )}
+            {!preview && !isViewingCompleted && editSets && (
+              <button
+                className="btn btn-icon btn-danger btn-sm"
+                onClick={() => requestRemoveExercise(exIdx)}
+                title="Remove exercise from this workout"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           {chartExerciseId === exSession.exerciseId && (() => {
@@ -531,6 +591,33 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
           )}
         </div>
       ))}
+
+      {!preview && !isViewingCompleted && editSets && (
+        <button
+          className="btn btn-secondary"
+          style={{ width: '100%', marginTop: 8 }}
+          onClick={() => setShowExercisePicker(true)}
+        >
+          <Plus size={16} /> Add Exercise
+        </button>
+      )}
+
+      {showExercisePicker && (
+        <ExercisePicker
+          alreadyAdded={exerciseSessions.map((e) => e.exerciseId)}
+          onPick={addExerciseToSession}
+          onClose={() => setShowExercisePicker(false)}
+        />
+      )}
+
+      {removeExerciseIdx !== null && (
+        <ConfirmDialog
+          message={`Remove "${getExerciseName(exerciseSessions[removeExerciseIdx].exerciseId)}" from this workout? The sets you logged for it will be lost.`}
+          confirmLabel="Remove"
+          onConfirm={() => removeExerciseFromSession(removeExerciseIdx)}
+          onCancel={() => setRemoveExerciseIdx(null)}
+        />
+      )}
 
       {preview ? (
         // Omitting onStart makes the preview read-only — used for archived
