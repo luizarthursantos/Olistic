@@ -126,6 +126,12 @@ export interface WorkoutExerciseSession {
   sets: WorkoutSet[];
   cardioMinutes?: number;
   estimatedCalories?: number;
+  /**
+   * Copied from the template when the session starts. Held on the session so
+   * it survives replacing the exercise, which would otherwise break the
+   * template lookup that used to resolve it.
+   */
+  note?: string;
 }
 
 export interface WorkoutSet {

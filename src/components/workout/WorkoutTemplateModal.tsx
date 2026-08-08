@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutTemplate, WorkoutExerciseTemplate, Exercise } from '../../types';
-import { X, Plus, Trash2, Pencil, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Plus, Trash2, Pencil, ChevronUp, ChevronDown, Replace } from 'lucide-react';
 
 interface WorkoutTemplateModalProps {
   template: WorkoutTemplate | null;
@@ -19,6 +19,7 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
   );
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [exerciseQuery, setExerciseQuery] = useState('');
+  const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
   const [newExerciseName, setNewExerciseName] = useState('');
   const [newExerciseIsCardio, setNewExerciseIsCardio] = useState(false);
   const [showCreateExercise, setShowCreateExercise] = useState(false);
@@ -36,7 +37,33 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
   const openExercisePicker = () => {
     setExerciseQuery('');
     setShowCreateExercise(false);
+    setReplacingIndex(null);
     setShowExercisePicker(true);
+  };
+
+  const openReplacePicker = (index: number) => {
+    setExerciseQuery('');
+    setShowCreateExercise(false);
+    setReplacingIndex(index);
+    setShowExercisePicker(true);
+  };
+
+  /**
+   * Points a row at a different exercise while leaving everything configured
+   * around it — sets, reps, load and notes — in place.
+   */
+  const replaceExerciseInTemplate = (index: number, exercise: Exercise) => {
+    setTemplateExercises(templateExercises.map((ex, i) =>
+      i === index ? { ...ex, exerciseId: exercise.id } : ex,
+    ));
+    setReplacingIndex(null);
+    setShowExercisePicker(false);
+  };
+
+  /** Routes a pick to whichever action opened the picker. */
+  const pickExercise = (exercise: Exercise) => {
+    if (replacingIndex !== null) replaceExerciseInTemplate(replacingIndex, exercise);
+    else addExerciseToTemplate(exercise);
   };
 
   const addExerciseToTemplate = (exercise: Exercise) => {
@@ -79,8 +106,9 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
       isCardio: newExerciseIsCardio,
       isCustom: true,
     });
-    const ex = { ...exercises[exercises.length - 1], id }; // just use the id
-    addExerciseToTemplate({
+    // Routed through pickExercise so creating one while replacing swaps the
+    // row rather than appending a second exercise.
+    pickExercise({
       id,
       name: newExerciseName.trim(),
       icon: newExerciseIsCardio ? '🏃' : '🏋️',
@@ -205,6 +233,13 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
                   </button>
                   <button
                     className="btn btn-icon btn-secondary btn-sm"
+                    onClick={() => openReplacePicker(i)}
+                    title="Replace exercise, keeping sets and notes"
+                  >
+                    <Replace size={14} />
+                  </button>
+                  <button
+                    className="btn btn-icon btn-secondary btn-sm"
                     onClick={() => moveExercise(i, -1)}
                     disabled={i === 0}
                     title="Move up"
@@ -304,7 +339,11 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
           <div className="modal-overlay" onClick={() => setShowExercisePicker(false)}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h3 className="modal-title" style={{ margin: 0 }}>Add Exercise</h3>
+                <h3 className="modal-title" style={{ margin: 0 }}>
+                  {replacingIndex !== null
+                    ? `Replace ${getExerciseName(templateExercises[replacingIndex].exerciseId)}`
+                    : 'Add Exercise'}
+                </h3>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button
                     className={`btn btn-sm ${editExercises ? 'btn-primary' : 'btn-secondary'}`}
@@ -338,7 +377,7 @@ export function WorkoutTemplateModal({ template, onClose }: WorkoutTemplateModal
                   >
                     <button
                       className="food-search-item"
-                      onClick={() => !editExercises && addExerciseToTemplate(exercise)}
+                      onClick={() => !editExercises && pickExercise(exercise)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',

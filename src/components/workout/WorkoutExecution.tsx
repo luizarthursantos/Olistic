@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession, Exercise } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr, getBestOneRepMax } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil, TrendingUp, X } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil, TrendingUp, X, Replace } from 'lucide-react';
 import { ExercisePicker } from './ExercisePicker';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import {
@@ -71,6 +71,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
           sets: [],
           cardioMinutes: prev?.cardioMinutes ?? ex.defaultReps,
           estimatedCalories: 0,
+          note: ex.notes || undefined,
         };
       }
       // Pre-fill with previous session's reps/load if available
@@ -82,6 +83,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
           loadKg: prevSets?.[i]?.loadKg ?? ex.defaultLoadKg,
           completed: false,
         })),
+        note: ex.notes || undefined,
       };
     });
   });
@@ -94,6 +96,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   const [chartExerciseId, setChartExerciseId] = useState<string | null>(null);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [removeExerciseIdx, setRemoveExerciseIdx] = useState<number | null>(null);
+  const [replaceExerciseIdx, setReplaceExerciseIdx] = useState<number | null>(null);
   const finishedRef = useRef(false);
   const sessionCreatedRef = useRef(false);
 
@@ -238,6 +241,52 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
       return [...current, { exerciseId: exercise.id, sets }];
     });
     setShowExercisePicker(false);
+  };
+
+  /**
+   * Swaps which exercise a slot refers to while keeping the work logged
+   * against it — the sets (reps, load, ticks) and the note carry over, so
+   * substituting a machine mid-workout does not cost the sets already done.
+   */
+  const replaceExerciseInSession = (exIndex: number, exercise: Exercise) => {
+    setExerciseSessions((current) => current.map((exSession, i) => {
+      if (i !== exIndex) return exSession;
+      const wasCardio = isCardio(exSession.exerciseId);
+
+      // Same kind: the logged work transfers as-is.
+      if (exercise.isCardio === wasCardio) {
+        return {
+          ...exSession,
+          exerciseId: exercise.id,
+          ...(exercise.isCardio
+            ? { estimatedCalories: estimateCardioCalories(latestWeight, exSession.cardioMinutes || 0, exercise.name) }
+            : {}),
+        };
+      }
+
+      // Crossing between cardio and lifting: sets and minutes do not translate,
+      // so rebuild that part from history while keeping the note.
+      const prev = latestExerciseData.get(exercise.id);
+      if (exercise.isCardio) {
+        const minutes = prev?.cardioMinutes ?? 10;
+        return {
+          exerciseId: exercise.id,
+          sets: [],
+          cardioMinutes: minutes,
+          estimatedCalories: estimateCardioCalories(latestWeight, minutes, exercise.name),
+          note: exSession.note,
+        };
+      }
+      const prevSets = prev?.sets ?? [];
+      return {
+        exerciseId: exercise.id,
+        sets: prevSets.length > 0
+          ? prevSets.map((s) => ({ reps: s.reps, loadKg: s.loadKg, completed: false }))
+          : Array.from({ length: 3 }, () => ({ reps: 10, loadKg: 0, completed: false })),
+        note: exSession.note,
+      };
+    }));
+    setReplaceExerciseIdx(null);
   };
 
   const removeExerciseFromSession = (exIndex: number) => {
@@ -441,13 +490,22 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
               </button>
             )}
             {!preview && !isViewingCompleted && editSets && (
-              <button
-                className="btn btn-icon btn-danger btn-sm"
-                onClick={() => requestRemoveExercise(exIdx)}
-                title="Remove exercise from this workout"
-              >
-                <X size={14} />
-              </button>
+              <>
+                <button
+                  className="btn btn-icon btn-secondary btn-sm"
+                  onClick={() => setReplaceExerciseIdx(exIdx)}
+                  title="Replace exercise, keeping the sets"
+                >
+                  <Replace size={14} />
+                </button>
+                <button
+                  className="btn btn-icon btn-danger btn-sm"
+                  onClick={() => requestRemoveExercise(exIdx)}
+                  title="Remove exercise from this workout"
+                >
+                  <X size={14} />
+                </button>
+              </>
             )}
           </div>
 
@@ -503,8 +561,9 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
             );
           })()}
 
-          {templateNotes[exSession.exerciseId] && (
-            <div className="exercise-note">{templateNotes[exSession.exerciseId]}</div>
+          {/* Sessions saved before notes were stored fall back to the template. */}
+          {(exSession.note ?? templateNotes[exSession.exerciseId]) && (
+            <div className="exercise-note">{exSession.note ?? templateNotes[exSession.exerciseId]}</div>
           )}
 
           {isCardio(exSession.exerciseId) ? (
@@ -607,6 +666,15 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
           alreadyAdded={exerciseSessions.map((e) => e.exerciseId)}
           onPick={addExerciseToSession}
           onClose={() => setShowExercisePicker(false)}
+        />
+      )}
+
+      {replaceExerciseIdx !== null && (
+        <ExercisePicker
+          title={`Replace ${getExerciseName(exerciseSessions[replaceExerciseIdx].exerciseId)}`}
+          alreadyAdded={exerciseSessions.map((e) => e.exerciseId)}
+          onPick={(exercise) => replaceExerciseInSession(replaceExerciseIdx, exercise)}
+          onClose={() => setReplaceExerciseIdx(null)}
         />
       )}
 
