@@ -37,16 +37,23 @@
 
 .workout-template-info {
   flex: 1;
+  /* Without this the name pushes the action row off the card on narrow screens
+     instead of ellipsising. */
+  min-width: 0;
 }
 
 .workout-template-info h4 {
   font-size: 14px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workout-template-actions {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .workout-history-list {

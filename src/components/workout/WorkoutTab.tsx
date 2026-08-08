@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
-import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye, Pencil, TrendingUp, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye, Pencil, TrendingUp, Archive, ArchiveRestore, Copy } from 'lucide-react';
 import { WorkoutTemplate, WorkoutSession } from '../../types';
 import { WorkoutTemplateModal } from './WorkoutTemplateModal';
 import { WorkoutExecution } from './WorkoutExecution';
@@ -15,6 +15,7 @@ export function WorkoutTab() {
   const {
     workoutTemplates,
     workoutSessions,
+    addWorkoutTemplate,
     updateWorkoutTemplate,
     deleteWorkoutTemplate,
     updateWorkoutSession,
@@ -32,6 +33,7 @@ export function WorkoutTab() {
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'template' | 'session'; id: string } | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [duplicating, setDuplicating] = useState<{ source: WorkoutTemplate; name: string } | null>(null);
 
   const sortedSessions = useMemo(() => {
     return [...workoutSessions].sort((a, b) => b.date.localeCompare(a.date));
@@ -56,6 +58,27 @@ export function WorkoutTab() {
   const setArchived = (templateId: string, archived: boolean) => {
     updateWorkoutTemplate(templateId, { archived });
     setDeleteConfirm(null);
+  };
+
+  /** Suggests "Push Day (copy)", then "(copy 2)" and so on if taken. */
+  const suggestCopyName = (name: string) => {
+    const taken = new Set(workoutTemplates.map((t) => t.name));
+    let candidate = `${name} (copy)`;
+    for (let n = 2; taken.has(candidate); n++) candidate = `${name} (copy ${n})`;
+    return candidate;
+  };
+
+  const confirmDuplicate = () => {
+    if (!duplicating) return;
+    const name = duplicating.name.trim();
+    if (!name) return;
+    addWorkoutTemplate({
+      name,
+      color: duplicating.source.color,
+      // Deep copy so editing the duplicate cannot reach back into the original.
+      exercises: duplicating.source.exercises.map((e) => ({ ...e })),
+    });
+    setDuplicating(null);
   };
 
   const startWorkout = (templateId: string) => {
@@ -210,12 +233,16 @@ export function WorkoutTab() {
                       >
                         <Eye size={14} />
                       </button>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => startWorkout(template.id)}
-                      >
-                        <Play size={14} /> Start
-                      </button>
+                      {/* Start is the widest control and irrelevant while
+                          editing — dropping it keeps the row on one line. */}
+                      {!editModeTemplates && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => startWorkout(template.id)}
+                        >
+                          <Play size={14} /> Start
+                        </button>
+                      )}
                       {editModeTemplates && (
                         <>
                           <button
@@ -223,6 +250,13 @@ export function WorkoutTab() {
                             onClick={() => openEditTemplate(template)}
                           >
                             <Edit3 size={14} />
+                          </button>
+                          <button
+                            className="btn btn-icon btn-secondary btn-sm"
+                            onClick={() => setDuplicating({ source: template, name: suggestCopyName(template.name) })}
+                            title="Duplicate under a new name"
+                          >
+                            <Copy size={14} />
                           </button>
                           <button
                             className="btn btn-icon btn-secondary btn-sm"
@@ -416,6 +450,41 @@ export function WorkoutTab() {
           template={editTemplate}
           onClose={() => { setShowTemplateModal(false); setEditTemplate(null); }}
         />
+      )}
+
+      {duplicating && (
+        <div className="modal-overlay" onClick={() => setDuplicating(null)}>
+          <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Duplicate Workout</h3>
+            <p className="text-sm text-muted" style={{ marginTop: -8, marginBottom: 12 }}>
+              Copies every exercise from "{duplicating.source.name}" into a new workout.
+            </p>
+            <div className="form-group">
+              <label className="label">Name</label>
+              <input
+                type="text"
+                className="input"
+                value={duplicating.name}
+                onChange={(e) => setDuplicating({ ...duplicating, name: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') confirmDuplicate(); }}
+                autoFocus
+                onFocus={(e) => e.target.select()}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary btn-sm" onClick={() => setDuplicating(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={confirmDuplicate}
+                disabled={!duplicating.name.trim()}
+              >
+                Duplicate
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {deleteConfirm && (() => {
