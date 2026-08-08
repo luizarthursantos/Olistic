@@ -60,7 +60,19 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
 
   const [sessionId, setSessionId] = useState<string | null>(existingSessionId || null);
   const [exerciseSessions, setExerciseSessions] = useState<WorkoutExerciseSession[]>(() => {
-    if (existingSession) return existingSession.exercises;
+    const templateNoteFor = (exerciseId: string) =>
+      template?.exercises.find((ex) => ex.exerciseId === exerciseId)?.notes || undefined;
+
+    if (existingSession) {
+      // Notes used to be looked up from the template by exercise id at render
+      // time. Sessions saved before the note moved onto the session have none,
+      // and replacing an exercise changes the id the lookup depends on — which
+      // silently dropped the note. Backfill on load so every session carries
+      // its own notes before anything can be swapped.
+      return existingSession.exercises.map((ex) =>
+        ex.note === undefined ? { ...ex, note: templateNoteFor(ex.exerciseId) } : ex,
+      );
+    }
     if (!template) return [];
     return template.exercises.map((ex) => {
       const exercise = exercises.find((e) => e.id === ex.exerciseId);
