@@ -63,6 +63,7 @@ export interface AppState {
   workoutTemplates: WorkoutTemplate[];
   addWorkoutTemplate: (template: Omit<WorkoutTemplate, 'id'>) => string;
   updateWorkoutTemplate: (id: string, template: Partial<WorkoutTemplate>) => void;
+  moveWorkoutTemplate: (id: string, direction: -1 | 1) => void;
   deleteWorkoutTemplate: (id: string) => void;
 
   // Workout Sessions
@@ -251,6 +252,25 @@ export const useStore = create<AppState>((set, get) => ({
   },
   updateWorkoutTemplate: (id, partial) => {
     const templates = get().workoutTemplates.map(t => t.id === id ? { ...t, ...partial } : t);
+    set({ workoutTemplates: templates });
+    saveToStorage('workoutTemplates', templates);
+  },
+  moveWorkoutTemplate: (id, direction) => {
+    const templates = [...get().workoutTemplates];
+    const from = templates.findIndex(t => t.id === id);
+    if (from === -1) return;
+
+    // Swap with the nearest template shown in the same list. Archived ones
+    // live in their own section, so they must not absorb a move made in the
+    // active list (or the other way round).
+    const archived = !!templates[from].archived;
+    let to = -1;
+    for (let i = from + direction; i >= 0 && i < templates.length; i += direction) {
+      if (!!templates[i].archived === archived) { to = i; break; }
+    }
+    if (to === -1) return;
+
+    [templates[from], templates[to]] = [templates[to], templates[from]];
     set({ workoutTemplates: templates });
     saveToStorage('workoutTemplates', templates);
   },

@@ -56,6 +56,25 @@
   flex-shrink: 0;
 }
 
+.workout-template-order {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Edit mode carries six controls, which will not fit beside the name on a
+   phone. Drop the action buttons onto their own row instead of letting the
+   name shrink to an ellipsis. */
+.workout-template-card.editing {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.workout-template-card.editing .workout-template-actions {
+  flex-basis: 100%;
+  justify-content: flex-end;
+}
+
 .workout-history-list {
   display: flex;
   flex-direction: column;

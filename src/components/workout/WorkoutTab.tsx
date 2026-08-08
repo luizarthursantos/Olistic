@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
-import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye, Pencil, TrendingUp, Archive, ArchiveRestore, Copy } from 'lucide-react';
+import { Plus, Play, Calendar, Clock, Trash2, Edit3, Eye, Pencil, TrendingUp, Archive, ArchiveRestore, Copy, ChevronUp, ChevronDown } from 'lucide-react';
 import { WorkoutTemplate, WorkoutSession } from '../../types';
 import { WorkoutTemplateModal } from './WorkoutTemplateModal';
 import { WorkoutExecution } from './WorkoutExecution';
@@ -17,6 +17,7 @@ export function WorkoutTab() {
     workoutSessions,
     addWorkoutTemplate,
     updateWorkoutTemplate,
+    moveWorkoutTemplate,
     deleteWorkoutTemplate,
     updateWorkoutSession,
     deleteWorkoutSession,
@@ -209,12 +210,32 @@ export function WorkoutTab() {
               </div>
             ) : (
               <div className="workout-templates-grid">
-                {activeTemplates.map((template) => (
-                  <div key={template.id} className="workout-template-card">
+                {activeTemplates.map((template, i) => (
+                  <div key={template.id} className={`workout-template-card${editModeTemplates ? ' editing' : ''}`}>
                     <div
                       className="workout-template-color"
                       style={{ background: template.color }}
                     />
+                    {editModeTemplates && (
+                      <div className="workout-template-order">
+                        <button
+                          className="btn btn-icon btn-secondary btn-sm"
+                          onClick={() => moveWorkoutTemplate(template.id, -1)}
+                          disabled={i === 0}
+                          title="Move up"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          className="btn btn-icon btn-secondary btn-sm"
+                          onClick={() => moveWorkoutTemplate(template.id, 1)}
+                          disabled={i === activeTemplates.length - 1}
+                          title="Move down"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                      </div>
+                    )}
                     <div
                       className="workout-template-info"
                       onClick={() => setPreviewTemplateId(template.id)}
@@ -226,22 +247,26 @@ export function WorkoutTab() {
                       </p>
                     </div>
                     <div className="workout-template-actions">
-                      <button
-                        className="btn btn-icon btn-secondary btn-sm"
-                        onClick={() => setPreviewTemplateId(template.id)}
-                        title="View"
-                      >
-                        <Eye size={14} />
-                      </button>
-                      {/* Start is the widest control and irrelevant while
-                          editing — dropping it keeps the row on one line. */}
+                      {/* Start and View are dropped while editing: Start is the
+                          widest control and irrelevant here, and tapping the
+                          card already opens the preview. That keeps the row on
+                          one line on a phone. */}
                       {!editModeTemplates && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => startWorkout(template.id)}
-                        >
-                          <Play size={14} /> Start
-                        </button>
+                        <>
+                          <button
+                            className="btn btn-icon btn-secondary btn-sm"
+                            onClick={() => setPreviewTemplateId(template.id)}
+                            title="View"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => startWorkout(template.id)}
+                          >
+                            <Play size={14} /> Start
+                          </button>
+                        </>
                       )}
                       {editModeTemplates && (
                         <>
