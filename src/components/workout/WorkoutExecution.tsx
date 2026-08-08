@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { WorkoutSet, WorkoutExerciseSession, Exercise } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr, getBestOneRepMax } from '../../utils/calculations';
-import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil, TrendingUp, X, Replace } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil, TrendingUp, X, Replace, ChevronUp, ChevronDown } from 'lucide-react';
 import { ExercisePicker } from './ExercisePicker';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import {
@@ -289,6 +289,16 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     setReplaceExerciseIdx(null);
   };
 
+  const moveExerciseInSession = (exIndex: number, direction: -1 | 1) => {
+    const target = exIndex + direction;
+    setExerciseSessions((current) => {
+      if (target < 0 || target >= current.length) return current;
+      const updated = [...current];
+      [updated[exIndex], updated[target]] = [updated[target], updated[exIndex]];
+      return updated;
+    });
+  };
+
   const removeExerciseFromSession = (exIndex: number) => {
     setExerciseSessions((current) => current.filter((_, i) => i !== exIndex));
     setRemoveExerciseIdx(null);
@@ -397,6 +407,10 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
 
   if (!template) return <p>Template not found</p>;
 
+  // Reordering, replacing, adding and removing exercises all belong to the
+  // same edit toggle, and none of them apply to a preview or a finished session.
+  const editingExercises = !preview && !isViewingCompleted && editSets;
+
   const templateNotes = template.exercises.reduce((acc, ex) => {
     if (ex.notes) acc[ex.exerciseId] = ex.notes;
     return acc;
@@ -476,37 +490,55 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
 
       {exerciseSessions.map((exSession, exIdx) => (
         <div key={exIdx} className="exercise-card">
-          <div className="exercise-card-header">
+          <div className={`exercise-card-header${editingExercises ? ' editing' : ''}`}>
             <span className="exercise-card-name">
               {getExerciseIcon(exSession.exerciseId)} {getExerciseName(exSession.exerciseId)}
             </span>
-            {!isCardio(exSession.exerciseId) && (
-              <button
-                className={`btn btn-icon btn-sm ${chartExerciseId === exSession.exerciseId ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setChartExerciseId(chartExerciseId === exSession.exerciseId ? null : exSession.exerciseId)}
-                title="1RM History"
-              >
-                <TrendingUp size={14} />
-              </button>
-            )}
-            {!preview && !isViewingCompleted && editSets && (
-              <>
+            <div className="exercise-card-actions">
+              {!isCardio(exSession.exerciseId) && (
                 <button
-                  className="btn btn-icon btn-secondary btn-sm"
-                  onClick={() => setReplaceExerciseIdx(exIdx)}
-                  title="Replace exercise, keeping the sets"
+                  className={`btn btn-icon btn-sm ${chartExerciseId === exSession.exerciseId ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setChartExerciseId(chartExerciseId === exSession.exerciseId ? null : exSession.exerciseId)}
+                  title="1RM History"
                 >
-                  <Replace size={14} />
+                  <TrendingUp size={14} />
                 </button>
-                <button
-                  className="btn btn-icon btn-danger btn-sm"
-                  onClick={() => requestRemoveExercise(exIdx)}
-                  title="Remove exercise from this workout"
-                >
-                  <X size={14} />
-                </button>
-              </>
-            )}
+              )}
+              {editingExercises && (
+                <>
+                  <button
+                    className="btn btn-icon btn-secondary btn-sm"
+                    onClick={() => moveExerciseInSession(exIdx, -1)}
+                    disabled={exIdx === 0}
+                    title="Move up"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    className="btn btn-icon btn-secondary btn-sm"
+                    onClick={() => moveExerciseInSession(exIdx, 1)}
+                    disabled={exIdx === exerciseSessions.length - 1}
+                    title="Move down"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                  <button
+                    className="btn btn-icon btn-secondary btn-sm"
+                    onClick={() => setReplaceExerciseIdx(exIdx)}
+                    title="Replace exercise, keeping the sets"
+                  >
+                    <Replace size={14} />
+                  </button>
+                  <button
+                    className="btn btn-icon btn-danger btn-sm"
+                    onClick={() => requestRemoveExercise(exIdx)}
+                    title="Remove exercise from this workout"
+                  >
+                    <X size={14} />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {chartExerciseId === exSession.exerciseId && (() => {
@@ -651,7 +683,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
         </div>
       ))}
 
-      {!preview && !isViewingCompleted && editSets && (
+      {editingExercises && (
         <button
           className="btn btn-secondary"
           style={{ width: '100%', marginTop: 8 }}

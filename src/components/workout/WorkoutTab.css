@@ -144,6 +144,25 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+.exercise-card-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Editing adds four more controls, which will not fit beside the exercise
+   name on a phone, so give them their own row. */
+.exercise-card-header.editing {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.exercise-card-header.editing .exercise-card-actions {
+  flex-basis: 100%;
+  justify-content: flex-end;
 }
 
 .exercise-note {
