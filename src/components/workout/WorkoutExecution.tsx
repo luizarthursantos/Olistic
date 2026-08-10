@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../../store/useStore';
-import { WorkoutSet, WorkoutExerciseSession, Exercise } from '../../types';
+import { WorkoutSet, WorkoutExerciseSession, WorkoutExerciseTemplate, Exercise } from '../../types';
 import { estimateWorkoutCalories, estimateCardioCalories, toLocalDateStr, getBestOneRepMax } from '../../utils/calculations';
 import { ArrowLeft, Check, Plus, Trash2, Save, Play, Pencil, TrendingUp, X, Replace, ChevronUp, ChevronDown } from 'lucide-react';
 import { ExercisePicker } from './ExercisePicker';
@@ -30,6 +30,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     exercises,
     addWorkoutSession,
     updateWorkoutSession,
+    updateWorkoutTemplate,
     bodyEntries,
     settings,
   } = useStore();
@@ -186,6 +187,56 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
     }
   }, [exerciseSessions, sessionId, isViewingCompleted, preview]);
 
+  /**
+   * Writes the session's shape back onto the template, so editing a workout
+   * while doing it changes the routine rather than just today's log.
+   *
+   * Only structure travels: which exercises, in what order, their notes and
+   * how many sets. The reps and loads typed into the set rows are a record of
+   * what was actually lifted, not the plan, and are left alone — otherwise
+   * every session would quietly rewrite the routine's targets.
+   */
+  const syncTemplateFromSession = (sessions: WorkoutExerciseSession[]) => {
+    if (!template || preview || isViewingCompleted) return;
+
+    const nextExercises: WorkoutExerciseTemplate[] = sessions.map((exSession) => {
+      const existing = template.exercises.find((ex) => ex.exerciseId === exSession.exerciseId);
+      const cardio = isCardio(exSession.exerciseId);
+      const setCount = cardio ? 1 : Math.max(1, exSession.sets.length);
+
+      // An exercise the template already knows keeps the targets configured
+      // for it; only its position, note and set count can have changed.
+      if (existing) {
+        return { ...existing, sets: setCount, notes: exSession.note ?? existing.notes };
+      }
+
+      // Newly added or swapped in: seed targets from what is on the card.
+      const first = exSession.sets[0];
+      return {
+        exerciseId: exSession.exerciseId,
+        sets: setCount,
+        defaultReps: cardio ? (exSession.cardioMinutes ?? 10) : (first?.reps ?? 10),
+        defaultLoadKg: first?.loadKg ?? 0,
+        notes: exSession.note ?? '',
+      };
+    });
+
+    updateWorkoutTemplate(template.id, { exercises: nextExercises });
+  };
+
+  /**
+   * Applies an edit-mode change to the session and mirrors it onto the
+   * template. Logging changes (reps, load, ticks, cardio minutes) deliberately
+   * do not go through here.
+   */
+  const applyStructuralEdit = (
+    update: (current: WorkoutExerciseSession[]) => WorkoutExerciseSession[],
+  ) => {
+    const next = update(exerciseSessions);
+    setExerciseSessions(next);
+    syncTemplateFromSession(next);
+  };
+
   const updateSet = (exIndex: number, setIndex: number, partial: Partial<WorkoutSet>) => {
     setExerciseSessions((prev) => {
       const updated = [...prev];
@@ -203,7 +254,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   };
 
   const addSet = (exIndex: number) => {
-    setExerciseSessions((prev) => {
+    applyStructuralEdit((prev) => {
       const updated = [...prev];
       const lastSet = updated[exIndex].sets[updated[exIndex].sets.length - 1];
       updated[exIndex] = {
@@ -218,7 +269,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   };
 
   const removeSet = (exIndex: number, setIndex: number) => {
-    setExerciseSessions((prev) => {
+    applyStructuralEdit((prev) => {
       const updated = [...prev];
       updated[exIndex] = {
         ...updated[exIndex],
@@ -234,7 +285,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
    */
   const addExerciseToSession = (exercise: Exercise) => {
     const prev = latestExerciseData.get(exercise.id);
-    setExerciseSessions((current) => {
+    applyStructuralEdit((current) => {
       if (exercise.isCardio) {
         const minutes = prev?.cardioMinutes ?? 10;
         return [...current, {
@@ -261,7 +312,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
    * substituting a machine mid-workout does not cost the sets already done.
    */
   const replaceExerciseInSession = (exIndex: number, exercise: Exercise) => {
-    setExerciseSessions((current) => current.map((exSession, i) => {
+    applyStructuralEdit((current) => current.map((exSession, i) => {
       if (i !== exIndex) return exSession;
       const wasCardio = isCardio(exSession.exerciseId);
 
@@ -307,14 +358,14 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
    * be refilled from the template on the next load and the deletion undone.
    */
   const updateExerciseNote = (exIndex: number, note: string) => {
-    setExerciseSessions((current) =>
+    applyStructuralEdit((current) =>
       current.map((exSession, i) => (i === exIndex ? { ...exSession, note } : exSession)),
     );
   };
 
   const moveExerciseInSession = (exIndex: number, direction: -1 | 1) => {
     const target = exIndex + direction;
-    setExerciseSessions((current) => {
+    applyStructuralEdit((current) => {
       if (target < 0 || target >= current.length) return current;
       const updated = [...current];
       [updated[exIndex], updated[target]] = [updated[target], updated[exIndex]];
@@ -323,7 +374,7 @@ export function WorkoutExecution({ templateId, existingSessionId, preview, onFin
   };
 
   const removeExerciseFromSession = (exIndex: number) => {
-    setExerciseSessions((current) => current.filter((_, i) => i !== exIndex));
+    applyStructuralEdit((current) => current.filter((_, i) => i !== exIndex));
     setRemoveExerciseIdx(null);
   };
 
