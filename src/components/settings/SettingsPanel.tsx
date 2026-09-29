@@ -4,7 +4,7 @@ import { ActivityLevel, ACTIVITY_LABELS, UnitSystem, AiProvider, ClaudeModel, CL
 import { exportToXlsx, importFromXlsx } from '../../utils/xlsxIO';
 import { toLocalDateStr } from '../../utils/calculations';
 import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone, FileText } from 'lucide-react';
-import { export1rmPdf } from '../../utils/export1rmPdf';
+import { export1rmPdf, DEFAULT_1RM_REPORT_DAYS } from '../../utils/export1rmPdf';
 import { BUILD_LABEL } from '../../version';
 import './SettingsPanel.css';
 
@@ -13,8 +13,19 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
-  const { settings, updateSettings, loadSampleData, exercises, workoutSessions, workoutTemplates } = useStore();
+  const { settings, updateSettings, loadSampleData, exercises, workoutSessions } = useStore();
   const [importStatus, setImportStatus] = useState<string>('');
+
+  // Settings saved before this field existed have no value, and the box can be
+  // momentarily blank while being retyped.
+  const stored1rmDays = settings.report1rmDays;
+  const reportDays = Number.isFinite(stored1rmDays) && stored1rmDays >= 1
+    ? Math.round(stored1rmDays)
+    : DEFAULT_1RM_REPORT_DAYS;
+
+  // Held as text so the box can be cleared and retyped. Only a usable number
+  // is committed, so an in-progress edit never persists as 0 or NaN.
+  const [reportDaysText, setReportDaysText] = useState(String(reportDays));
   const [canInstall, setCanInstall] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -328,14 +339,37 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             <button
               className="btn btn-secondary"
               onClick={() => {
-                const result = export1rmPdf(exercises, workoutSessions, workoutTemplates);
+                const result = export1rmPdf(exercises, workoutSessions, reportDays);
                 if (!result) {
-                  setImportStatus('No exercise data found in the past month.');
+                  setImportStatus(`No exercise data found in the past ${reportDays} day${reportDays === 1 ? '' : 's'}.`);
                 }
               }}
             >
               <FileText size={16} /> Export 1RM PDF
             </button>
+          </div>
+
+          <div className="form-group" style={{ marginTop: 12, maxWidth: 200 }}>
+            <label className="label">1RM report period (days)</label>
+            <input
+              type="number"
+              className="input"
+              value={reportDaysText}
+              onChange={(e) => {
+                setReportDaysText(e.target.value);
+                const parsed = Number(e.target.value);
+                if (e.target.value !== '' && Number.isFinite(parsed) && parsed >= 1) {
+                  updateSettings({ report1rmDays: Math.round(parsed) });
+                }
+              }}
+              // Snap back to the stored value if the box was left unusable.
+              onBlur={() => setReportDaysText(String(reportDays))}
+              min={1}
+              step={1}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
             <button
               className="btn btn-primary"
               onClick={() => {

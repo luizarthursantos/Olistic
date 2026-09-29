@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { Exercise, WorkoutSession, WorkoutTemplate } from '../types';
+import { Exercise, WorkoutSession } from '../types';
 import { getBestOneRepMax } from './calculations';
 
 interface ExerciseChartData {
@@ -7,15 +7,24 @@ interface ExerciseChartData {
   points: { date: string; orm: number }[];
 }
 
+/** Roughly two months — the default window for the report. */
+export const DEFAULT_1RM_REPORT_DAYS = 60;
+
 export function export1rmPdf(
   exercises: Exercise[],
   workoutSessions: WorkoutSession[],
-  workoutTemplates: WorkoutTemplate[],
+  days: number = DEFAULT_1RM_REPORT_DAYS,
 ) {
+  // Guard the window: a blank or nonsensical input falls back to the default
+  // rather than producing an empty report.
+  const windowDays = Number.isFinite(days) && days >= 1
+    ? Math.round(days)
+    : DEFAULT_1RM_REPORT_DAYS;
+
   const now = new Date();
-  const oneMonthAgo = new Date(now);
-  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-  const cutoff = oneMonthAgo.toISOString().slice(0, 10);
+  const start = new Date(now);
+  start.setDate(start.getDate() - windowDays);
+  const cutoff = start.toISOString().slice(0, 10);
 
   const completedSessions = workoutSessions.filter(
     (s) => s.completed && s.date >= cutoff,
@@ -69,11 +78,15 @@ export function export1rmPdf(
   // Title
   pdf.setFontSize(18);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('1RM Report — Past Month', margin, 22);
+  pdf.text(`1RM Report — Past ${windowDays} Day${windowDays === 1 ? '' : 's'}`, margin, 22);
 
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
-  const dateRange = `${formatDateShort(cutoff)} — ${formatDateShort(now.toISOString().slice(0, 10))}`;
+  const today = now.toISOString().slice(0, 10);
+  // Longer windows can span a year boundary, where "1 Oct — 29 Sep" reads
+  // backwards without the year.
+  const spansYears = cutoff.slice(0, 4) !== today.slice(0, 4);
+  const dateRange = `${formatDateShort(cutoff, spansYears)} — ${formatDateShort(today, spansYears)}`;
   pdf.text(dateRange, margin, 29);
 
   // Summary
@@ -115,7 +128,9 @@ export function export1rmPdf(
   }
 
   // Save
-  const fileName = `1rm-report-${now.toISOString().slice(0, 10)}.pdf`;
+  // Window in the name so reports over different periods do not overwrite
+  // each other in the downloads folder.
+  const fileName = `1rm-report-${today}-${windowDays}d.pdf`;
   pdf.save(fileName);
   return fileName;
 }
@@ -226,8 +241,8 @@ function drawChart(
   pdf.setTextColor(0, 0, 0);
 }
 
-function formatDateShort(dateStr: string): string {
+function formatDateShort(dateStr: string, withYear = false): string {
   const d = new Date(dateStr + 'T12:00:00');
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${d.getDate()} ${months[d.getMonth()]}`;
+  return `${d.getDate()} ${months[d.getMonth()]}${withYear ? ` ${d.getFullYear()}` : ''}`;
 }

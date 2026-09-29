@@ -34,6 +34,8 @@ export interface UserSettings {
   fatPerKg: number;
   fiberPerKg: number;
   sugarLimitG: number;
+  /** How many past days the exported 1RM report covers. */
+  report1rmDays: number;
 }
 
 export interface BodyEntry {

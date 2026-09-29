@@ -114,6 +114,7 @@ const defaultSettings: UserSettings = {
   fatPerKg: 1.0,
   fiberPerKg: 0.4,
   sugarLimitG: 50,
+  report1rmDays: 60,
 };
 
 const today = toLocalDateStr(new Date());
