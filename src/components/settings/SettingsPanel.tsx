@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import { ActivityLevel, ACTIVITY_LABELS, UnitSystem, AiProvider, ClaudeModel, CLAUDE_MODEL_LABELS } from '../../types';
+import { ActivityLevel, ACTIVITY_LABELS, UnitSystem, AiProvider, getClaudeModelOptions } from '../../types';
+import { fetchClaudeModels, mergeModelLists } from '../../utils/claudeModels';
 import { exportToXlsx, importFromXlsx } from '../../utils/xlsxIO';
 import { toLocalDateStr } from '../../utils/calculations';
-import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone, FileText } from 'lucide-react';
+import { X, Download, Upload, Sun, Moon, Database, Key, Smartphone, FileText, RefreshCw } from 'lucide-react';
 import { export1rmPdf, DEFAULT_1RM_REPORT_DAYS } from '../../utils/export1rmPdf';
 import { BUILD_LABEL } from '../../version';
 import './SettingsPanel.css';
@@ -15,6 +16,8 @@ interface SettingsPanelProps {
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { settings, updateSettings, loadSampleData, exercises, workoutSessions } = useStore();
   const [importStatus, setImportStatus] = useState<string>('');
+  const [modelsChecking, setModelsChecking] = useState(false);
+  const [modelsStatus, setModelsStatus] = useState<{ ok: boolean; text: string } | null>(null);
 
   // Settings saved before this field existed have no value, and the box can be
   // momentarily blank while being retyped.
@@ -87,6 +90,42 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       }
     };
     input.click();
+  };
+
+  const modelOptions = getClaudeModelOptions(settings);
+  const selectedModel = settings.claudeModel || 'claude-sonnet-4-6';
+
+  const checkForNewModels = async () => {
+    if (!settings.claudeApiKey) {
+      setModelsStatus({ ok: false, text: 'Add your Claude API key below first — the model list comes from your account.' });
+      return;
+    }
+    setModelsChecking(true);
+    setModelsStatus(null);
+    try {
+      const fetched = await fetchClaudeModels(settings.claudeApiKey);
+      if (fetched.length === 0) {
+        setModelsStatus({ ok: false, text: 'The API returned no models for this key.' });
+        return;
+      }
+      const { models, added } = mergeModelLists(modelOptions, fetched);
+      updateSettings({ claudeModels: models });
+      setModelsStatus({
+        ok: true,
+        text: added.length === 0
+          ? `Up to date — ${fetched.length} models available.`
+          : `Added ${added.length} new model${added.length === 1 ? '' : 's'}: ${added.map((m) => m.label).join(', ')}.`,
+      });
+    } catch (err) {
+      setModelsStatus({
+        ok: false,
+        text: err instanceof TypeError
+          ? 'Could not reach Anthropic. Check your connection and try again.'
+          : (err instanceof Error ? err.message : 'Could not check for models.'),
+      });
+    } finally {
+      setModelsChecking(false);
+    }
   };
 
   return (
@@ -264,17 +303,43 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           {settings.aiProvider === 'claude' && (
             <div className="form-group">
               <label className="label">Claude Model</label>
-              <select
-                className="select"
-                value={settings.claudeModel || 'claude-sonnet-4-6'}
-                onChange={(e) => updateSettings({ claudeModel: e.target.value as ClaudeModel })}
-              >
-                {(Object.keys(CLAUDE_MODEL_LABELS) as ClaudeModel[]).map((model) => (
-                  <option key={model} value={model}>
-                    {CLAUDE_MODEL_LABELS[model]}
-                  </option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select
+                  className="select"
+                  style={{ flex: 1, minWidth: 0 }}
+                  value={selectedModel}
+                  onChange={(e) => updateSettings({ claudeModel: e.target.value })}
+                >
+                  {modelOptions.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.label}
+                    </option>
+                  ))}
+                  {/* Keep a selection that is not in the list visible rather than
+                      letting the select silently show the first option. */}
+                  {!modelOptions.some((m) => m.id === selectedModel) && (
+                    <option value={selectedModel}>{selectedModel}</option>
+                  )}
+                </select>
+                <button
+                  className="btn btn-secondary"
+                  onClick={checkForNewModels}
+                  disabled={modelsChecking}
+                  title="Check for new models"
+                  style={{ flexShrink: 0 }}
+                >
+                  <RefreshCw size={16} className={modelsChecking ? 'spin' : undefined} />
+                  {modelsChecking ? 'Checking…' : 'Update'}
+                </button>
+              </div>
+              {modelsStatus && (
+                <p
+                  className="text-sm"
+                  style={{ margin: '6px 0 0', color: modelsStatus.ok ? 'var(--success)' : 'var(--danger, #ef4444)' }}
+                >
+                  {modelsStatus.text}
+                </p>
+              )}
             </div>
           )}
           <div className="form-group">

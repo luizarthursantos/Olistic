@@ -4,7 +4,8 @@ import { MealType, FoodItem, MEAL_TYPE_LABELS } from '../../types';
 import { calcCaloriesFromMacros } from '../../utils/calculations';
 import { analyzeFoodPhoto, analyzeFoodDescription, FoodAnalysisResult } from '../../utils/analyzeFood';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { X, Search, Camera, Image, Loader, Settings, Send, Trash2, Pencil, Sparkles, Save } from 'lucide-react';
+import { X, Search, Camera, Image, Loader, Settings, Send, Trash2, Pencil, Sparkles, Save, BookMarked } from 'lucide-react';
+import { SavedMealsPanel } from './SavedMealsPanel';
 
 interface AddMealModalProps {
   mealType: MealType;
@@ -12,7 +13,7 @@ interface AddMealModalProps {
   onClose: () => void;
 }
 
-type AddMode = 'manual' | 'search' | 'photo' | 'ai';
+type AddMode = 'manual' | 'search' | 'meals' | 'photo' | 'ai';
 
 export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
   const { addMealEntry, foodItems, addFoodItem, updateFoodItem, deleteFoodItem, settings } = useStore();
@@ -346,6 +347,13 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
             <Search size={16} />
           </button>
           <button
+            className={`tab-btn ${mode === 'meals' ? 'active' : ''}`}
+            onClick={() => setMode('meals')}
+            title="Saved Meals"
+          >
+            <BookMarked size={16} />
+          </button>
+          <button
             className={`tab-btn ${mode === 'ai' ? 'active' : ''}`}
             onClick={() => setMode('ai')}
             title="AI"
@@ -440,6 +448,10 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
               </button>
             )}
           </div>
+        )}
+
+        {mode === 'meals' && (
+          <SavedMealsPanel date={date} mealType={mealType} onLogged={onClose} />
         )}
 
         {mode === 'ai' && (
@@ -752,7 +764,9 @@ export function AddMealModal({ mealType, date, onClose }: AddMealModalProps) {
           </>
         )}
 
-        {(!photoProcessing && !aiProcessing) && (
+        {/* Saved meals log from their own Add button; this footer submits the
+            manual form and would be a second, misleading "Add Meal" there. */}
+        {(!photoProcessing && !aiProcessing && mode !== 'meals') && (
           <div className="modal-actions">
             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
             {fromAi && form.name.trim() && (

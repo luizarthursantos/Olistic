@@ -5,14 +5,36 @@ export type ThemeMode = 'light' | 'dark';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export type AiProvider = 'claude' | 'gemini';
-export type ClaudeModel = 'claude-sonnet-4-6' | 'claude-sonnet-5' | 'claude-opus-5' | 'claude-haiku-4-5';
+/**
+ * A Claude model id. Plain string rather than a fixed union: the list can be
+ * extended at runtime from the Models API, so any id the API offers is valid.
+ */
+export type ClaudeModel = string;
 
+export interface ClaudeModelOption {
+  id: ClaudeModel;
+  label: string;
+}
+
+/** Built-in choices, used until the list has been refreshed from the API. */
 export const CLAUDE_MODEL_LABELS: Record<ClaudeModel, string> = {
   'claude-sonnet-4-6': 'Claude Sonnet 4.6',
   'claude-sonnet-5': 'Claude Sonnet 5',
   'claude-opus-5': 'Claude Opus 5',
   'claude-haiku-4-5': 'Claude Haiku 4.5',
 };
+
+export const DEFAULT_CLAUDE_MODEL_OPTIONS: ClaudeModelOption[] =
+  Object.entries(CLAUDE_MODEL_LABELS).map(([id, label]) => ({ id, label }));
+
+/** The models offered in Settings: the refreshed list if there is one. */
+export function getClaudeModelOptions(settings: Pick<UserSettings, 'claudeModels'>): ClaudeModelOption[] {
+  return settings.claudeModels?.length ? settings.claudeModels : DEFAULT_CLAUDE_MODEL_OPTIONS;
+}
+
+export function getClaudeModelLabel(settings: Pick<UserSettings, 'claudeModels'>, id: ClaudeModel): string {
+  return getClaudeModelOptions(settings).find((m) => m.id === id)?.label ?? CLAUDE_MODEL_LABELS[id] ?? id;
+}
 
 export interface UserSettings {
   birthday: string; // ISO date
@@ -29,6 +51,8 @@ export interface UserSettings {
   geminiApiKey: string;
   aiProvider: AiProvider;
   claudeModel: ClaudeModel;
+  /** Model list after "Check for new models"; absent until first refreshed. */
+  claudeModels?: ClaudeModelOption[];
   chartLineAlpha: number; // 0-100, line opacity % when moving average enabled
   proteinPerKg: number;
   fatPerKg: number;
@@ -67,6 +91,31 @@ export interface FoodItem {
   sugarG: number;
   fiberG: number;
   servingSize: number;
+}
+
+/**
+ * One food inside a saved meal. The food's macros are copied in (per
+ * `servingSize` grams) rather than referenced, so editing or deleting the food
+ * in the library never changes or breaks a meal that was saved with it.
+ */
+export interface SavedMealItem {
+  foodItemId?: string;
+  name: string;
+  servingSize: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  sugarG: number;
+  fiberG: number;
+  /** How much of the food the meal contains. */
+  quantityG: number;
+}
+
+/** A named set of foods that can be logged together in one tap. */
+export interface SavedMeal {
+  id: string;
+  name: string;
+  items: SavedMealItem[];
 }
 
 export interface MealEntry {

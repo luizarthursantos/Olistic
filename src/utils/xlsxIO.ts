@@ -16,6 +16,7 @@ const SHEETS: SheetDef[] = [
   { key: 'bodyEntries', sheetName: 'Body Entries', isArray: true },
   { key: 'macroTargets', sheetName: 'Macro Targets', isArray: true },
   { key: 'foodItems', sheetName: 'Food Items', isArray: true },
+  { key: 'savedMeals', sheetName: 'Saved Meals', isArray: true, jsonCols: ['items'] },
   { key: 'mealEntries', sheetName: 'Meals', isArray: true },
   { key: 'exercises', sheetName: 'Exercises', isArray: true },
   { key: 'workoutTemplates', sheetName: 'Workout Templates', isArray: true, jsonCols: ['exercises'] },

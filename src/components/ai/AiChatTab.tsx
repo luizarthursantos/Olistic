@@ -4,7 +4,7 @@ import { Send, Trash2, AlertCircle, Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChatMessage, sendChatMessage, buildDataSummary } from '../../utils/aiChat';
-import { CLAUDE_MODEL_LABELS } from '../../types';
+import { getClaudeModelLabel } from '../../types';
 import './AiChatTab.css';
 
 export function AiChatTab() {
@@ -121,7 +121,7 @@ export function AiChatTab() {
         <div>
           <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>AI Assistant</h3>
           <p className="text-sm text-muted" style={{ margin: 0 }}>
-            {settings.aiProvider === 'gemini' ? 'Gemini 2.0 Flash' : CLAUDE_MODEL_LABELS[settings.claudeModel || 'claude-sonnet-4-6']} · Aware of your logged data
+            {settings.aiProvider === 'gemini' ? 'Gemini 2.0 Flash' : getClaudeModelLabel(settings, settings.claudeModel || 'claude-sonnet-4-6')} · Aware of your logged data
           </p>
         </div>
         {chatMessages.length > 0 && (

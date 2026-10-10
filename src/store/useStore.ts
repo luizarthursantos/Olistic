@@ -6,6 +6,7 @@ import {
   BodyEntry,
   MacroTargets,
   FoodItem,
+  SavedMeal,
   MealEntry,
   Exercise,
   WorkoutTemplate,
@@ -45,6 +46,12 @@ export interface AppState {
   addFoodItem: (item: Omit<FoodItem, 'id'>) => string;
   updateFoodItem: (id: string, item: Partial<Omit<FoodItem, 'id'>>) => void;
   deleteFoodItem: (id: string) => void;
+
+  // Saved meals
+  savedMeals: SavedMeal[];
+  addSavedMeal: (meal: Omit<SavedMeal, 'id'>) => string;
+  updateSavedMeal: (id: string, meal: Partial<Omit<SavedMeal, 'id'>>) => void;
+  deleteSavedMeal: (id: string) => void;
 
   // Food - Meals
   mealEntries: MealEntry[];
@@ -196,6 +203,26 @@ export const useStore = create<AppState>((set, get) => ({
     const items = get().foodItems.filter(i => i.id !== id);
     set({ foodItems: items });
     saveToStorage('foodItems', items);
+  },
+
+  // Saved meals
+  savedMeals: loadFromStorage<SavedMeal[]>('savedMeals', []),
+  addSavedMeal: (meal) => {
+    const id = uuid();
+    const meals = [...get().savedMeals, { ...meal, id }];
+    set({ savedMeals: meals });
+    saveToStorage('savedMeals', meals);
+    return id;
+  },
+  updateSavedMeal: (id, partial) => {
+    const meals = get().savedMeals.map(m => m.id === id ? { ...m, ...partial } : m);
+    set({ savedMeals: meals });
+    saveToStorage('savedMeals', meals);
+  },
+  deleteSavedMeal: (id) => {
+    const meals = get().savedMeals.filter(m => m.id !== id);
+    set({ savedMeals: meals });
+    saveToStorage('savedMeals', meals);
   },
 
   // Meal Entries
