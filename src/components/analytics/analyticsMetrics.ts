@@ -34,6 +34,7 @@ export const AVAILABLE_METRICS: MetricDefinition[] = [
   { key: 'lean_mass_kg', label: 'Lean Mass (kg)', category: 'body', unit: 'kg' },
   { key: 'waist', label: 'Waist Circumference', category: 'body', unit: 'cm' },
   { key: 'neck', label: 'Neck Circumference', category: 'body', unit: 'cm' },
+  { key: 'biceps', label: 'Biceps Circumference', category: 'body', unit: 'cm' },
   { key: 'ffmi', label: 'FFMI', category: 'body', unit: '' },
   { key: 'target_ffmi', label: 'Target FFMI', category: 'body', unit: '' },
   { key: 'target_body_fat_pct', label: 'Target Body Fat %', category: 'body', unit: '%' },
@@ -134,6 +135,10 @@ export function getMetricData(
 
     case 'neck':
       return entries.filter((e) => has(e, 'neckCm')).map((e) => ({ date: e.date, value: n(e.neckCm) }));
+
+    // Optional measurement: only days it was actually taken are plotted.
+    case 'biceps':
+      return entries.filter((e) => has(e, 'bicepsCm')).map((e) => ({ date: e.date, value: n(e.bicepsCm) }));
 
     // --- Calculated metrics: interpolate underlying fields, plot for every entry ---
     case 'body_fat_pct':

@@ -177,8 +177,10 @@ USER PROFILE:
     const bmr = calcBMR(settings.sex, weight, heightCm, age);
     const tdee = calcTDEE(bmr, latest.activityLevel);
     const avg7 = get7DayAvgWeight(bodyEntries, latest.date);
+    // Biceps is optional, so the latest entry may not carry it.
+    const latestBiceps = bodyDesc.find((e) => num(e.bicepsCm) > 0);
     summary += `\nCURRENT STATUS (from latest body entry, ${latest.date}):
-- Weight: ${weight} kg${avg7 ? ` (7-day avg: ${avg7} kg)` : ''}, Waist: ${resolve(latest, 'waistCm')} cm, Neck: ${resolve(latest, 'neckCm')} cm
+- Weight: ${weight} kg${avg7 ? ` (7-day avg: ${avg7} kg)` : ''}, Waist: ${resolve(latest, 'waistCm')} cm, Neck: ${resolve(latest, 'neckCm')} cm${latestBiceps ? `, Biceps: ${latestBiceps.bicepsCm} cm (measured ${latestBiceps.date})` : ''}
 - Body fat: ${bf}% (target ${settings.targetBodyFatPct}%, ${fmtGap(bf - num(settings.targetBodyFatPct), 'pp above', 'pp below')})
 - FFMI: ${ffmi.toFixed(2)} (target ${settings.targetFFMI}, ${fmtGap(num(settings.targetFFMI) - ffmi, 'to gain', 'above target', 2)})
 - BMR: ${bmr} kcal, TDEE at rest: ${tdee} kcal (before workout calories)\n`;
@@ -194,9 +196,9 @@ USER PROFILE:
   // ── Daily table: the full history, one row per logged day ───────────────
   if (loggedDates.length > 0) {
     summary += `\nDAILY SUMMARY (${loggedDates.length} logged days, most recent first)
-Columns: date | wt = weight kg | wt7d = 7-day avg weight kg | bf% | ffmi | in = kcal eaten | tgt = kcal target | out = total expenditure kcal (TDEE + workout) | bal = in - out | P/C/F/sug/fib = grams eaten | Ptgt = protein target g | training
+Columns: date | wt = weight kg | wt7d = 7-day avg weight kg | bf% | ffmi | bic = biceps cm (logged days only) | in = kcal eaten | tgt = kcal target | out = total expenditure kcal (TDEE + workout) | bal = in - out | P/C/F/sug/fib = grams eaten | Ptgt = protein target g | training
 BAL SIGN: negative = deficit (ate less than burned), positive = surplus. Blank cell = not logged / not computable.
-date | wt | wt7d | bf% | ffmi | in | tgt | out | bal | P | Ptgt | C | F | sug | fib | training\n`;
+date | wt | wt7d | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | sug | fib | training\n`;
 
     for (const date of [...loggedDates].reverse()) {
       const meals = mealsByDate.get(date) ?? [];
@@ -251,6 +253,7 @@ date | wt | wt7d | bf% | ffmi | in | tgt | out | bal | P | Ptgt | C | F | sug | 
         cell(get7DayAvgWeight(bodyEntries, date) ?? 0, 1),
         cell(bf, 1),
         cell(ffmi, 2),
+        cell(num(entry?.bicepsCm), 1),
         cell(eaten.cal),
         cell(num(targets?.calories)),
         cell(out),

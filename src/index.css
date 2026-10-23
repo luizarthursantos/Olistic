@@ -484,3 +484,13 @@ input[type="number"]::-webkit-outer-spin-button {
   width: 64px;
   text-align: right;
 }
+
+/* Utility classes used across the components but never defined, so helper
+   text was rendering at body size and full brightness. */
+.text-sm {
+  font-size: 13px;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}

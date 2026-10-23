@@ -20,6 +20,7 @@ export function BodyTab() {
     weightKg: String(existingEntry?.weightKg ?? 75),
     waistCm: String(existingEntry?.waistCm ?? 80),
     neckCm: String(existingEntry?.neckCm ?? 37),
+    bicepsCm: existingEntry?.bicepsCm ? String(existingEntry.bicepsCm) : '',
     activityLevel: existingEntry?.activityLevel || settings.activityLevel,
   });
 
@@ -27,6 +28,13 @@ export function BodyTab() {
     weightKg: Number(form.weightKg) || 0,
     waistCm: Number(form.waistCm) || 0,
     neckCm: Number(form.neckCm) || 0,
+    bicepsCm: Number(form.bicepsCm) || 0,
+  };
+
+  // Safe numeric getter — handles strings, undefined, NaN
+  const num = (val: unknown): number => {
+    const n = Number(val);
+    return isFinite(n) ? n : 0;
   };
 
   const openForm = (entry?: BodyEntry) => {
@@ -35,6 +43,7 @@ export function BodyTab() {
         weightKg: String(entry.weightKg),
         waistCm: String(entry.waistCm),
         neckCm: String(entry.neckCm),
+        bicepsCm: entry.bicepsCm ? String(entry.bicepsCm) : '',
         activityLevel: entry.activityLevel,
       });
       setEditEntry(entry);
@@ -45,17 +54,22 @@ export function BodyTab() {
           weightKg: String(existing.weightKg),
           waistCm: String(existing.waistCm),
           neckCm: String(existing.neckCm),
+          bicepsCm: existing.bicepsCm ? String(existing.bicepsCm) : '',
           activityLevel: existing.activityLevel,
         });
       } else {
         // Use last entry as defaults
         const sorted = [...bodyEntries].sort((a, b) => b.date.localeCompare(a.date));
         const last = sorted[0];
+        // Biceps is optional, so the latest entry may not have it — take the
+        // most recent measurement instead of leaving the field blank.
+        const lastBiceps = sorted.find((e) => num(e.bicepsCm) > 0)?.bicepsCm;
         if (last) {
           setForm({
             weightKg: String(last.weightKg),
             waistCm: String(last.waistCm),
             neckCm: String(last.neckCm),
+            bicepsCm: lastBiceps ? String(lastBiceps) : '',
             activityLevel: last.activityLevel,
           });
         }
@@ -71,6 +85,8 @@ export function BodyTab() {
       weightKg: formNum.weightKg,
       waistCm: formNum.waistCm,
       neckCm: formNum.neckCm,
+      // Left blank means not measured today, not zero.
+      ...(formNum.bicepsCm > 0 ? { bicepsCm: formNum.bicepsCm } : {}),
       activityLevel: form.activityLevel,
     });
     setShowForm(false);
@@ -82,14 +98,8 @@ export function BodyTab() {
     setDeleteConfirm(null);
   };
 
-  // Safe numeric getter — handles strings, undefined, NaN
-  const num = (val: unknown): number => {
-    const n = Number(val);
-    return isFinite(n) ? n : 0;
-  };
-
   // Interpolate a numeric field for a given date from surrounding entries that have it
-  const interpolateField = (date: string, field: 'weightKg' | 'waistCm' | 'neckCm'): number => {
+  const interpolateField = (date: string, field: 'weightKg' | 'waistCm' | 'neckCm' | 'bicepsCm'): number => {
     const sorted = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
     const before = sorted.filter((e) => e.date <= date && num(e[field]) > 0).pop();
     const after = sorted.find((e) => e.date >= date && num(e[field]) > 0);
@@ -102,11 +112,15 @@ export function BodyTab() {
       const v2 = num(after[field]);
       return Math.round((v1 + t * (v2 - v1)) * 10) / 10;
     }
+    // Biceps was added later than the other measurements and is optional, so a
+    // day before it was first measured has no value — projecting the first
+    // measurement backwards would invent history.
+    if (field === 'bicepsCm' && !before) return 0;
     return num(before?.[field]) || num(after?.[field]) || 0;
   };
 
   // Get best value for a field: use entry's own value if present, otherwise interpolate
-  const resolveField = (entry: BodyEntry, field: 'weightKg' | 'waistCm' | 'neckCm'): number => {
+  const resolveField = (entry: BodyEntry, field: 'weightKg' | 'waistCm' | 'neckCm' | 'bicepsCm'): number => {
     const v = num(entry[field]);
     return v > 0 ? v : interpolateField(entry.date, field);
   };
@@ -128,6 +142,7 @@ export function BodyTab() {
       weightKg: interpolateField(selectedDate, 'weightKg'),
       waistCm: interpolateField(selectedDate, 'waistCm'),
       neckCm: interpolateField(selectedDate, 'neckCm'),
+      bicepsCm: interpolateField(selectedDate, 'bicepsCm'),
       activityLevel,
     } as BodyEntry;
   }, [bodyEntries, selectedDate]);
@@ -141,6 +156,7 @@ export function BodyTab() {
     const weight = resolveField(interpolatedEntry, 'weightKg');
     const waist = resolveField(interpolatedEntry, 'waistCm');
     const neck = resolveField(interpolatedEntry, 'neckCm');
+    const biceps = resolveField(interpolatedEntry, 'bicepsCm');
     if (!weight) return null;
 
     const bodyFat = calcBodyFatNavy(settings.sex, waist, neck, settings.heightCm);
@@ -151,7 +167,7 @@ export function BodyTab() {
     const leanMassKg = weight * (1 - bodyFat / 100);
     const fatMassKg = weight * (bodyFat / 100);
 
-    return { weight, bodyFat, ffmi, bmr, tdee, leanMassKg, fatMassKg };
+    return { weight, biceps, bodyFat, ffmi, bmr, tdee, leanMassKg, fatMassKg };
   }, [interpolatedEntry, bodyEntries, settings]);
 
   const recentEntries = useMemo(() => {
@@ -204,6 +220,12 @@ export function BodyTab() {
             </div>
             <div className="stat-card-label">Weight to Lose</div>
           </div>
+          {stats.biceps > 0 && (
+            <div className="stat-card">
+              <div className="stat-card-value">{stats.biceps} cm</div>
+              <div className="stat-card-label">Biceps</div>
+            </div>
+          )}
           </div>
         </div>
       ) : (
@@ -230,14 +252,15 @@ export function BodyTab() {
             </button>
           </div>
           <div className="table-wrapper">
-            <table>
+            <table className="body-entries-table">
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Weight (kg)</th>
-                  <th>Waist (cm)</th>
-                  <th>Neck (cm)</th>
-                  <th>BF (%)</th>
+                  <th>Weight</th>
+                  <th>Waist</th>
+                  <th>Neck</th>
+                  <th>Biceps</th>
+                  <th>BF %</th>
                   {editMode && <th></th>}
                 </tr>
               </thead>
@@ -246,17 +269,20 @@ export function BodyTab() {
                   const weight = resolveField(entry, 'weightKg');
                   const waist = resolveField(entry, 'waistCm');
                   const neck = resolveField(entry, 'neckCm');
+                  const biceps = resolveField(entry, 'bicepsCm');
                   const bf = calcBodyFatNavy(settings.sex, waist, neck, settings.heightCm);
                   const est = { color: 'var(--text-muted)', fontStyle: 'italic' as const };
                   const hasWeight = num(entry.weightKg) > 0;
                   const hasWaist = num(entry.waistCm) > 0;
                   const hasNeck = num(entry.neckCm) > 0;
+                  const hasBiceps = num(entry.bicepsCm) > 0;
                   return (
                     <tr key={entry.id}>
                       <td>{entry.date.slice(8,10)}-{entry.date.slice(5,7)}-{entry.date.slice(2,4)}</td>
                       <td style={!hasWeight ? est : undefined}>{weight || '–'}</td>
                       <td style={!hasWaist ? est : undefined}>{waist || '–'}</td>
                       <td style={!hasNeck ? est : undefined}>{neck || '–'}</td>
+                      <td style={!hasBiceps ? est : undefined}>{biceps || '–'}</td>
                       <td style={!hasWaist || !hasNeck ? est : undefined}>{bf || '–'}</td>
                       {editMode && (
                         <td>
@@ -284,6 +310,9 @@ export function BodyTab() {
               </tbody>
             </table>
           </div>
+          <p className="text-sm text-muted" style={{ margin: '8px 0 0' }}>
+            Weight in kg, measurements in cm. Grey values are estimated from nearby entries.
+          </p>
         </div>
       )}
 
@@ -327,21 +356,32 @@ export function BodyTab() {
                 />
               </div>
               <div className="form-group">
-                <label className="label">Activity Level</label>
-                <select
-                  className="select"
-                  value={form.activityLevel}
-                  onChange={(e) =>
-                    setForm({ ...form, activityLevel: e.target.value as ActivityLevel })
-                  }
-                >
-                  {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((level) => (
-                    <option key={level} value={level}>
-                      {ACTIVITY_LABELS[level]}
-                    </option>
-                  ))}
-                </select>
+                <label className="label">Biceps (cm)</label>
+                <input
+                  type="number"
+                  className="input"
+                  value={form.bicepsCm}
+                  onChange={(e) => setForm({ ...form, bicepsCm: e.target.value })}
+                  step={0.1}
+                  placeholder="Optional"
+                />
               </div>
+            </div>
+            <div className="form-group">
+              <label className="label">Activity Level</label>
+              <select
+                className="select"
+                value={form.activityLevel}
+                onChange={(e) =>
+                  setForm({ ...form, activityLevel: e.target.value as ActivityLevel })
+                }
+              >
+                {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((level) => (
+                  <option key={level} value={level}>
+                    {ACTIVITY_LABELS[level]}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Live preview */}

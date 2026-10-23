@@ -25,3 +25,20 @@
   color: var(--accent);
   margin-top: 4px;
 }
+
+/* Six columns have to fit a phone, so this table runs tighter than the
+   global defaults and keeps units out of the headers. */
+.body-entries-table th,
+.body-entries-table td {
+  padding: 8px 4px;
+  white-space: nowrap;
+}
+
+.body-entries-table td {
+  font-size: 13px;
+}
+
+.body-entries-table th {
+  font-size: 11px;
+  letter-spacing: 0;
+}

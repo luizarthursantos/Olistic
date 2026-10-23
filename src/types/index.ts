@@ -68,6 +68,8 @@ export interface BodyEntry {
   weightKg: number;
   waistCm: number;
   neckCm: number;
+  /** Optional: entries logged before biceps tracking existed have none. */
+  bicepsCm?: number;
   activityLevel: ActivityLevel;
 }
 
