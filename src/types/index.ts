@@ -67,7 +67,8 @@ export interface BodyEntry {
   date: string; // ISO date
   weightKg: number;
   waistCm: number;
-  neckCm: number;
+  /** Optional: left blank, it is estimated from nearby entries. */
+  neckCm?: number;
   /** Optional: entries logged before biceps tracking existed have none. */
   bicepsCm?: number;
   activityLevel: ActivityLevel;

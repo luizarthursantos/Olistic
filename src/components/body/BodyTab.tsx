@@ -16,10 +16,13 @@ export function BodyTab() {
 
   const existingEntry = bodyEntries.find((e) => e.date === selectedDate);
 
+  // Neck and biceps are optional: they start blank, with the last measurement
+  // shown faded as a placeholder. Left blank, nothing is stored and the value
+  // is estimated from nearby entries instead.
   const [form, setForm] = useState({
     weightKg: String(existingEntry?.weightKg ?? 75),
     waistCm: String(existingEntry?.waistCm ?? 80),
-    neckCm: String(existingEntry?.neckCm ?? 37),
+    neckCm: existingEntry?.neckCm ? String(existingEntry.neckCm) : '',
     bicepsCm: existingEntry?.bicepsCm ? String(existingEntry.bicepsCm) : '',
     activityLevel: existingEntry?.activityLevel || settings.activityLevel,
   });
@@ -37,45 +40,46 @@ export function BodyTab() {
     return isFinite(n) ? n : 0;
   };
 
+  /** A measurement entered as its own value, or blank if it was left empty. */
+  const ownValue = (v: number | undefined) => (num(v) > 0 ? String(v) : '');
+
+  /**
+   * The value to show faded in an optional field: the last time it was
+   * measured before the entry's date, or the latest measurement otherwise.
+   * The entry's own date is skipped — its value is in the field itself.
+   */
+  const lastMeasured = (date: string, field: 'neckCm' | 'bicepsCm'): number => {
+    const measured = bodyEntries
+      .filter((e) => e.date !== date && num(e[field]) > 0)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    return num((measured.find((e) => e.date < date) ?? measured[0])?.[field]);
+  };
+
   const openForm = (entry?: BodyEntry) => {
-    if (entry) {
+    const target = entry ?? bodyEntries.find((e) => e.date === selectedDate);
+    if (target) {
       setForm({
-        weightKg: String(entry.weightKg),
-        waistCm: String(entry.waistCm),
-        neckCm: String(entry.neckCm),
-        bicepsCm: entry.bicepsCm ? String(entry.bicepsCm) : '',
-        activityLevel: entry.activityLevel,
+        weightKg: String(target.weightKg),
+        waistCm: String(target.waistCm),
+        neckCm: ownValue(target.neckCm),
+        bicepsCm: ownValue(target.bicepsCm),
+        activityLevel: target.activityLevel,
       });
-      setEditEntry(entry);
     } else {
-      const existing = bodyEntries.find((e) => e.date === selectedDate);
-      if (existing) {
+      // New day: weight, waist and activity carry over from the last entry;
+      // the optional fields stay blank and show the last value faded.
+      const last = [...bodyEntries].sort((a, b) => b.date.localeCompare(a.date))[0];
+      if (last) {
         setForm({
-          weightKg: String(existing.weightKg),
-          waistCm: String(existing.waistCm),
-          neckCm: String(existing.neckCm),
-          bicepsCm: existing.bicepsCm ? String(existing.bicepsCm) : '',
-          activityLevel: existing.activityLevel,
+          weightKg: String(last.weightKg),
+          waistCm: String(last.waistCm),
+          neckCm: '',
+          bicepsCm: '',
+          activityLevel: last.activityLevel,
         });
-      } else {
-        // Use last entry as defaults
-        const sorted = [...bodyEntries].sort((a, b) => b.date.localeCompare(a.date));
-        const last = sorted[0];
-        // Biceps is optional, so the latest entry may not have it — take the
-        // most recent measurement instead of leaving the field blank.
-        const lastBiceps = sorted.find((e) => num(e.bicepsCm) > 0)?.bicepsCm;
-        if (last) {
-          setForm({
-            weightKg: String(last.weightKg),
-            waistCm: String(last.waistCm),
-            neckCm: String(last.neckCm),
-            bicepsCm: lastBiceps ? String(lastBiceps) : '',
-            activityLevel: last.activityLevel,
-          });
-        }
       }
-      setEditEntry(null);
     }
+    setEditEntry(entry ?? null);
     setShowForm(true);
   };
 
@@ -84,8 +88,9 @@ export function BodyTab() {
       date: editEntry?.date || selectedDate,
       weightKg: formNum.weightKg,
       waistCm: formNum.waistCm,
-      neckCm: formNum.neckCm,
-      // Left blank means not measured today, not zero.
+      // Left blank means not measured that day: store nothing, so it is
+      // estimated from nearby entries rather than read as zero.
+      ...(formNum.neckCm > 0 ? { neckCm: formNum.neckCm } : {}),
       ...(formNum.bicepsCm > 0 ? { bicepsCm: formNum.bicepsCm } : {}),
       activityLevel: form.activityLevel,
     });
@@ -99,8 +104,16 @@ export function BodyTab() {
   };
 
   // Interpolate a numeric field for a given date from surrounding entries that have it
-  const interpolateField = (date: string, field: 'weightKg' | 'waistCm' | 'neckCm' | 'bicepsCm'): number => {
-    const sorted = [...bodyEntries].sort((a, b) => a.date.localeCompare(b.date));
+  const interpolateField = (
+    date: string,
+    field: 'weightKg' | 'waistCm' | 'neckCm' | 'bicepsCm',
+    // Ignore an entry on this date — used when previewing an entry whose
+    // stored value is about to be replaced by what is in the form.
+    excludeDate?: string,
+  ): number => {
+    const sorted = [...bodyEntries]
+      .filter((e) => e.date !== excludeDate)
+      .sort((a, b) => a.date.localeCompare(b.date));
     const before = sorted.filter((e) => e.date <= date && num(e[field]) > 0).pop();
     const after = sorted.find((e) => e.date >= date && num(e[field]) > 0);
     if (before && after && before.date !== after.date) {
@@ -173,6 +186,12 @@ export function BodyTab() {
   const recentEntries = useMemo(() => {
     return [...bodyEntries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
   }, [bodyEntries]);
+
+  const formDate = editEntry?.date || selectedDate;
+  const lastNeck = showForm ? lastMeasured(formDate, 'neckCm') : 0;
+  const lastBiceps = showForm ? lastMeasured(formDate, 'bicepsCm') : 0;
+  const previewNeck = formNum.neckCm || (showForm ? interpolateField(formDate, 'neckCm', formDate) : 0);
+  const previewBodyFat = calcBodyFatNavy(settings.sex, formNum.waistCm, previewNeck, settings.heightCm);
 
   return (
     <div className="body-tab fade-in">
@@ -353,6 +372,7 @@ export function BodyTab() {
                   value={form.neckCm}
                   onChange={(e) => setForm({ ...form, neckCm: e.target.value })}
                   step={0.1}
+                  placeholder={lastNeck ? String(lastNeck) : 'Optional'}
                 />
               </div>
               <div className="form-group">
@@ -363,10 +383,14 @@ export function BodyTab() {
                   value={form.bicepsCm}
                   onChange={(e) => setForm({ ...form, bicepsCm: e.target.value })}
                   step={0.1}
-                  placeholder="Optional"
+                  placeholder={lastBiceps ? String(lastBiceps) : 'Optional'}
                 />
               </div>
             </div>
+            <p className="text-sm text-muted" style={{ margin: '-4px 0 12px' }}>
+              Neck and biceps are optional. Faded values are your last measurement;
+              leave blank to estimate from nearby entries.
+            </p>
             <div className="form-group">
               <label className="label">Activity Level</label>
               <select
@@ -384,11 +408,12 @@ export function BodyTab() {
               </select>
             </div>
 
-            {/* Live preview */}
-            {formNum.waistCm > formNum.neckCm && (
+            {/* Live preview — with neck left blank, preview with the same estimate
+                the saved entry will get. */}
+            {previewNeck > 0 && formNum.waistCm > previewNeck && (
               <div className="body-preview">
-                <span>Body Fat: {calcBodyFatNavy(settings.sex, formNum.waistCm, formNum.neckCm, settings.heightCm)}%</span>
-                <span>FFMI: {calcFFMI(formNum.weightKg, calcBodyFatNavy(settings.sex, formNum.waistCm, formNum.neckCm, settings.heightCm), settings.heightCm).toFixed(2)}</span>
+                <span>Body Fat: {previewBodyFat}%{!formNum.neckCm && ' (est.)'}</span>
+                <span>FFMI: {calcFFMI(formNum.weightKg, previewBodyFat, settings.heightCm).toFixed(2)}</span>
               </div>
             )}
 
