@@ -206,9 +206,9 @@ USER PROFILE:
   // ── Daily table: the full history, one row per logged day ───────────────
   if (loggedDates.length > 0) {
     summary += `\nDAILY SUMMARY (${loggedDates.length} logged days, most recent first)
-Columns: date | wt = weight kg | wt7d = 7-day avg weight kg | bf% (* = neck not measured that day, so bf% and ffmi use an estimated neck) | ffmi | bic = biceps cm (logged days only) | in = kcal eaten | tgt = kcal target | out = total expenditure kcal (TDEE + workout) | bal = in - out | P/C/F/sug/fib = grams eaten | Ptgt = protein target g | training
+Columns: date | wt = weight kg | wt7d = 7-day avg weight kg | waist = waist cm (logged days only) | bf% (* = neck not measured that day, so bf% and ffmi use an estimated neck) | ffmi | bic = biceps cm (logged days only) | in = kcal eaten | tgt = kcal target | out = total expenditure kcal (TDEE + workout) | bal = in - out | P/C/F/sug/fib = grams eaten | Ptgt = protein target g | training
 BAL SIGN: negative = deficit (ate less than burned), positive = surplus. Blank cell = not logged / not computable.
-date | wt | wt7d | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | sug | fib | training\n`;
+date | wt | wt7d | waist | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | sug | fib | training\n`;
 
     for (const date of [...loggedDates].reverse()) {
       const meals = mealsByDate.get(date) ?? [];
@@ -261,6 +261,9 @@ date | wt | wt7d | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | 
         // would be a number the weight chart never plots.
         cell(num(entry?.weightKg), 1),
         cell(get7DayAvgWeight(bodyEntries, date) ?? 0, 1),
+        // Logged value only, like weight: the trend the AI reads should be
+        // made of real measurements.
+        cell(num(entry?.waistCm), 1),
         // Neck is optional; flag body fat computed from an estimated one.
         bf > 0 && num(entry?.neckCm) <= 0 ? `${cell(bf, 1)}*` : cell(bf, 1),
         cell(ffmi, 2),
@@ -440,6 +443,7 @@ HOW THE DATA IS ORGANISED:
 - STRENGTH PROGRESSION covers all history as estimated 1RM and total volume per exercise per session. Use it for progression questions rather than the 30-day detail.
 - 'rest' in the training column means the day was logged but no workout was done. Days in UNLOGGED DAYS have no entries at all — that is missing data, not a rest day. Keep the two distinct.
 - Sessions marked INCOMPLETE were started and abandoned; their calories are excluded from 'out'. A session marked IN PROGRESS is today's workout, still under way — do not treat it as abandoned.
+- 'waist' is the direct measure of abdominal fat and the main driver of bf%. Use it for fat-loss questions alongside weight.
 - Neck is optional and often left blank, in which case it is estimated from nearby entries. A bf% marked * was computed from an estimated neck: treat small day-to-day changes in those values as estimation noise, not real body-composition change.
 - WORKOUT TEMPLATES are the routines the user currently follows. ARCHIVED ROUTINES are retired: do not recommend them as the current plan.
 - A "note that day" on an exercise was written during that workout and records something about that session specifically.
