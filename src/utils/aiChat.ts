@@ -1,8 +1,8 @@
-import { AiProvider, ClaudeModel, BodyEntry, MealEntry, WorkoutSession, WorkoutTemplate, Exercise, UserSettings, MacroTargets, SavedMeal } from '../types';
+import { AiProvider, ClaudeModel, BodyEntry, MealEntry, WorkoutSession, WorkoutTemplate, Exercise, UserSettings, SavedMeal } from '../types';
 import { streamClaudeText } from './claudeStream';
 import {
   calcBodyFatNavy, calcFFMI, calcBMR, calcTDEE, calcAge, getBestOneRepMax,
-  get7DayAvgWeight, computeMacrosFromWeight, toLocalDateStr,
+  get7DayAvgWeight, toLocalDateStr,
 } from './calculations';
 
 export interface ChatMessage {
@@ -64,7 +64,6 @@ function buildDataSummary(
   workoutSessions: WorkoutSession[],
   workoutTemplates: WorkoutTemplate[],
   exercises: Exercise[],
-  macroTargets: MacroTargets[],
   savedMeals: SavedMeal[] = [],
 ): string {
   const age = calcAge(settings.birthday);
@@ -118,27 +117,6 @@ function buildDataSummary(
     return calcBodyFatNavy(settings.sex, waist, neck, heightCm);
   };
 
-  // Macro targets are forward-filled by date, then scaled to the 7-day average
-  // weight — same resolution the Food tab uses.
-  const targetsDesc = [...macroTargets].sort((a, b) => b.date.localeCompare(a.date));
-  const targetsOn = (date: string) => {
-    const target = targetsDesc.find((t) => t.date <= date);
-    if (!target) return null;
-    const avgWeight = get7DayAvgWeight(bodyEntries, date);
-    if (!avgWeight) return target;
-    return {
-      ...target,
-      ...computeMacrosFromWeight(
-        target.calories,
-        avgWeight,
-        settings.proteinPerKg ?? 2.0,
-        settings.fatPerKg ?? 1.0,
-        settings.fiberPerKg ?? 0.4,
-        settings.sugarLimitG ?? 50,
-      ),
-    };
-  };
-
   // ── Group logs by date ─────────────────────────────────────────────────
   const mealsByDate = new Map<string, MealEntry[]>();
   for (const m of mealEntries) {
@@ -170,8 +148,7 @@ All dates below are in YYYY-MM-DD format. Interpret them carefully — pay atten
 USER PROFILE:
 - Age: ${age}, Sex: ${settings.sex}, Height: ${settings.heightCm} cm
 - Default activity level: ${settings.activityLevel.replace(/_/g, ' ')}
-- Unit system: ${settings.unitSystem}
-- Targets: Body fat ${settings.targetBodyFatPct}%, FFMI ${settings.targetFFMI}, Caloric balance ${settings.targetCaloricDelta} kcal/day\n`;
+- Unit system: ${settings.unitSystem}\n`;
 
   if (latest) {
     const weight = resolve(latest, 'weightKg');
@@ -191,24 +168,17 @@ USER PROFILE:
       : `${latest.neckCm} cm`;
     summary += `\nCURRENT STATUS (from latest body entry, ${latest.date}):
 - Weight: ${weight} kg${avg7 ? ` (7-day avg: ${avg7} kg)` : ''}, Waist: ${resolve(latest, 'waistCm')} cm, Neck: ${neckText}${latestBiceps ? `, Biceps: ${latestBiceps.bicepsCm} cm (measured ${latestBiceps.date})` : ''}
-- Body fat: ${bf}%${neckEstimated ? ' (from estimated neck)' : ''} (target ${settings.targetBodyFatPct}%, ${fmtGap(bf - num(settings.targetBodyFatPct), 'pp above', 'pp below')})
-- FFMI: ${ffmi.toFixed(2)} (target ${settings.targetFFMI}, ${fmtGap(num(settings.targetFFMI) - ffmi, 'to gain', 'above target', 2)})
+- Body fat: ${bf}%${neckEstimated ? ' (from estimated neck)' : ''}
+- FFMI: ${ffmi.toFixed(2)}
 - BMR: ${bmr} kcal, TDEE at rest: ${tdee} kcal (before workout calories)\n`;
-  }
-
-  const currentTargets = targetsOn(today);
-  if (currentTargets) {
-    summary += `\nCURRENT MACRO TARGETS (${currentTargets.calories} kcal/day):
-- Protein ${currentTargets.proteinG}g, Carbs ${currentTargets.carbsG}g, Fat ${currentTargets.fatG}g, Fiber ${currentTargets.fiberG}g, Sugar limit ${currentTargets.sugarG}g
-- Gram targets scale with 7-day average weight (protein ${settings.proteinPerKg ?? 2.0} g/kg, fat ${settings.fatPerKg ?? 1.0} g/kg, fiber ${settings.fiberPerKg ?? 0.4} g/kg); carbs fill the remaining calories\n`;
   }
 
   // ── Daily table: the full history, one row per logged day ───────────────
   if (loggedDates.length > 0) {
     summary += `\nDAILY SUMMARY (${loggedDates.length} logged days, most recent first)
-Columns: date | wt = weight kg | wt7d = 7-day avg weight kg | waist = waist cm (logged days only) | bf% (* = neck not measured that day, so bf% and ffmi use an estimated neck) | ffmi | bic = biceps cm (logged days only) | in = kcal eaten | tgt = kcal target | out = total expenditure kcal (TDEE + workout) | bal = in - out | P/C/F/sug/fib = grams eaten | Ptgt = protein target g | training
+Columns: date | wt = weight kg | wt7d = 7-day avg weight kg | waist = waist cm (logged days only) | bf% (* = neck not measured that day, so bf% and ffmi use an estimated neck) | ffmi | bic = biceps cm (logged days only) | in = kcal eaten | out = total expenditure kcal (TDEE + workout) | bal = in - out | P/C/F/sug/fib = grams eaten | training
 BAL SIGN: negative = deficit (ate less than burned), positive = surplus. Blank cell = not logged / not computable.
-date | wt | wt7d | waist | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | sug | fib | training\n`;
+date | wt | wt7d | waist | bf% | ffmi | bic | in | out | bal | P | C | F | sug | fib | training\n`;
 
     for (const date of [...loggedDates].reverse()) {
       const meals = mealsByDate.get(date) ?? [];
@@ -243,8 +213,6 @@ date | wt | wt7d | waist | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | 
       }
       const balance = eaten.cal > 0 && out > 0 ? eaten.cal - out : 0;
 
-      const targets = targetsOn(date);
-
       const trained = sessions.map((s) => {
         const cardioMin = s.exercises.reduce((sum, ex) => sum + num(ex.cardioMinutes), 0);
         const parts = [templateName(s.templateId)];
@@ -269,11 +237,9 @@ date | wt | wt7d | waist | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | 
         cell(ffmi, 2),
         cell(num(entry?.bicepsCm), 1),
         cell(eaten.cal),
-        cell(num(targets?.calories)),
         cell(out),
         cell(balance),
         cell(eaten.p),
-        cell(num(targets?.proteinG)),
         cell(eaten.c),
         cell(eaten.f),
         cell(eaten.sugar),
@@ -416,15 +382,6 @@ date | wt | wt7d | waist | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | 
   return summary;
 }
 
-/** "2.4 pp above" / "on target" — for stating distance to a goal. */
-function fmtGap(delta: number, over: string, under: string, places = 1): string {
-  const f = Math.pow(10, places);
-  const rounded = Math.round(delta * f) / f;
-  if (rounded === 0) return 'on target';
-  const magnitude = Math.abs(rounded).toFixed(places);
-  return rounded > 0 ? `${magnitude} ${over}` : `${magnitude} ${under}`;
-}
-
 const SYSTEM_PROMPT = (dataSummary: string) =>
   `You are an AI fitness and nutrition assistant inside "Olistic", a personal health tracking app. You have access to the user's complete logged data below. Use this data to give personalized feedback, insights, recommendations, or just chat.
 
@@ -435,9 +392,9 @@ IMPORTANT RULES:
 - Use metric units unless the user's settings indicate imperial.
 
 HOW THE DATA IS ORGANISED:
-- DAILY SUMMARY is the main table: one row per logged day, most recent first, covering the entire history. Prefer it for any trend, average, or adherence question — the values are precomputed and match what the app's Analytics tab plots, so use them as given rather than recalculating from raw entries.
+- DAILY SUMMARY is the main table: one row per logged day, most recent first, covering the entire history. Prefer it for any trend or average question — the values are precomputed and match what the app's Analytics tab plots, so use them as given rather than recalculating from raw entries.
 - A blank cell means not logged or not computable. Do not read a blank as zero.
-- 'bal' is caloric balance: negative = deficit, positive = surplus. The user's target balance is in USER PROFILE and uses the same sign convention.
+- 'bal' is caloric balance: negative = deficit, positive = surplus.
 - 'out' already includes workout calories, so balance is complete as given.
 - MEAL DETAIL and WORKOUT DETAIL only cover the last 30 days. Older days are still fully represented in the DAILY SUMMARY table — if asked about an older day, use the table and do not say the data is missing.
 - STRENGTH PROGRESSION covers all history as estimated 1RM and total volume per exercise per session. Use it for progression questions rather than the 30-day detail.
