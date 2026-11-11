@@ -16,6 +16,7 @@ export function AiChatTab() {
     workoutTemplates,
     exercises,
     macroTargets,
+    savedMeals,
     chatMessages,
     setChatMessages,
   } = useStore();
@@ -31,8 +32,8 @@ export function AiChatTab() {
   const apiKey = settings.aiProvider === 'gemini' ? settings.geminiApiKey : settings.claudeApiKey;
 
   const dataSummary = useMemo(
-    () => buildDataSummary(settings, bodyEntries, mealEntries, workoutSessions, workoutTemplates, exercises, macroTargets),
-    [settings, bodyEntries, mealEntries, workoutSessions, workoutTemplates, exercises, macroTargets],
+    () => buildDataSummary(settings, bodyEntries, mealEntries, workoutSessions, workoutTemplates, exercises, macroTargets, savedMeals),
+    [settings, bodyEntries, mealEntries, workoutSessions, workoutTemplates, exercises, macroTargets, savedMeals],
   );
 
   useEffect(() => {

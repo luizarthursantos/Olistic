@@ -1,4 +1,4 @@
-import { AiProvider, ClaudeModel, BodyEntry, MealEntry, WorkoutSession, WorkoutTemplate, Exercise, UserSettings, MacroTargets } from '../types';
+import { AiProvider, ClaudeModel, BodyEntry, MealEntry, WorkoutSession, WorkoutTemplate, Exercise, UserSettings, MacroTargets, SavedMeal } from '../types';
 import { streamClaudeText } from './claudeStream';
 import {
   calcBodyFatNavy, calcFFMI, calcBMR, calcTDEE, calcAge, getBestOneRepMax,
@@ -34,7 +34,9 @@ function toDate(dateStr: string): Date {
 function shiftDays(dateStr: string, days: number): string {
   const d = toDate(dateStr);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  // Local, not toISOString(): the UTC date can differ from the local one, and
+  // every other date in the summary is local.
+  return toLocalDateStr(d);
 }
 
 /** Collapses a sorted list of dates into ranges: ['a', 'b→c', 'd']. */
@@ -63,6 +65,7 @@ function buildDataSummary(
   workoutTemplates: WorkoutTemplate[],
   exercises: Exercise[],
   macroTargets: MacroTargets[],
+  savedMeals: SavedMeal[] = [],
 ): string {
   const age = calcAge(settings.birthday);
   const today = toLocalDateStr(new Date());
@@ -177,11 +180,18 @@ USER PROFILE:
     const bmr = calcBMR(settings.sex, weight, heightCm, age);
     const tdee = calcTDEE(bmr, latest.activityLevel);
     const avg7 = get7DayAvgWeight(bodyEntries, latest.date);
-    // Biceps is optional, so the latest entry may not carry it.
+    // Neck and biceps are optional, so the latest entry may not carry them.
+    // Say when a value is an estimate — body fat is computed from neck, so an
+    // estimated neck makes the body fat an estimate too.
     const latestBiceps = bodyDesc.find((e) => num(e.bicepsCm) > 0);
+    const latestNeck = bodyDesc.find((e) => num(e.neckCm) > 0);
+    const neckEstimated = num(latest.neckCm) <= 0;
+    const neckText = neckEstimated
+      ? `${resolve(latest, 'neckCm')} cm (estimated${latestNeck ? `; last measured ${latestNeck.neckCm} cm on ${latestNeck.date}` : ''})`
+      : `${latest.neckCm} cm`;
     summary += `\nCURRENT STATUS (from latest body entry, ${latest.date}):
-- Weight: ${weight} kg${avg7 ? ` (7-day avg: ${avg7} kg)` : ''}, Waist: ${resolve(latest, 'waistCm')} cm, Neck: ${resolve(latest, 'neckCm')} cm${latestBiceps ? `, Biceps: ${latestBiceps.bicepsCm} cm (measured ${latestBiceps.date})` : ''}
-- Body fat: ${bf}% (target ${settings.targetBodyFatPct}%, ${fmtGap(bf - num(settings.targetBodyFatPct), 'pp above', 'pp below')})
+- Weight: ${weight} kg${avg7 ? ` (7-day avg: ${avg7} kg)` : ''}, Waist: ${resolve(latest, 'waistCm')} cm, Neck: ${neckText}${latestBiceps ? `, Biceps: ${latestBiceps.bicepsCm} cm (measured ${latestBiceps.date})` : ''}
+- Body fat: ${bf}%${neckEstimated ? ' (from estimated neck)' : ''} (target ${settings.targetBodyFatPct}%, ${fmtGap(bf - num(settings.targetBodyFatPct), 'pp above', 'pp below')})
 - FFMI: ${ffmi.toFixed(2)} (target ${settings.targetFFMI}, ${fmtGap(num(settings.targetFFMI) - ffmi, 'to gain', 'above target', 2)})
 - BMR: ${bmr} kcal, TDEE at rest: ${tdee} kcal (before workout calories)\n`;
   }
@@ -196,7 +206,7 @@ USER PROFILE:
   // ── Daily table: the full history, one row per logged day ───────────────
   if (loggedDates.length > 0) {
     summary += `\nDAILY SUMMARY (${loggedDates.length} logged days, most recent first)
-Columns: date | wt = weight kg | wt7d = 7-day avg weight kg | bf% | ffmi | bic = biceps cm (logged days only) | in = kcal eaten | tgt = kcal target | out = total expenditure kcal (TDEE + workout) | bal = in - out | P/C/F/sug/fib = grams eaten | Ptgt = protein target g | training
+Columns: date | wt = weight kg | wt7d = 7-day avg weight kg | bf% (* = neck not measured that day, so bf% and ffmi use an estimated neck) | ffmi | bic = biceps cm (logged days only) | in = kcal eaten | tgt = kcal target | out = total expenditure kcal (TDEE + workout) | bal = in - out | P/C/F/sug/fib = grams eaten | Ptgt = protein target g | training
 BAL SIGN: negative = deficit (ate less than burned), positive = surplus. Blank cell = not logged / not computable.
 date | wt | wt7d | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | sug | fib | training\n`;
 
@@ -239,7 +249,7 @@ date | wt | wt7d | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | 
         const cardioMin = s.exercises.reduce((sum, ex) => sum + num(ex.cardioMinutes), 0);
         const parts = [templateName(s.templateId)];
         if (cardioMin > 0) parts.push(`${Math.round(cardioMin)}min cardio`);
-        if (!s.completed) parts.push('INCOMPLETE');
+        if (!s.completed) parts.push(s.date === today ? 'IN PROGRESS' : 'INCOMPLETE');
         return parts.join(', ');
       });
       const training = trained.length > 0 ? trained.join(' + ') : 'rest';
@@ -251,7 +261,8 @@ date | wt | wt7d | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | 
         // would be a number the weight chart never plots.
         cell(num(entry?.weightKg), 1),
         cell(get7DayAvgWeight(bodyEntries, date) ?? 0, 1),
-        cell(bf, 1),
+        // Neck is optional; flag body fat computed from an estimated one.
+        bf > 0 && num(entry?.neckCm) <= 0 ? `${cell(bf, 1)}*` : cell(bf, 1),
         cell(ffmi, 2),
         cell(num(entry?.bicepsCm), 1),
         cell(eaten.cal),
@@ -302,18 +313,28 @@ date | wt | wt7d | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | 
     summary += `\nWORKOUT DETAIL (every set, last ${DETAIL_WINDOW_DAYS} days only):\n`;
     for (const session of detailSessions) {
       const time = `${session.startTime?.slice(11, 16) || '?'}–${session.endTime?.slice(11, 16) || '?'}`;
-      summary += `  ${session.date} "${templateName(session.templateId)}" (${session.estimatedCalories} kcal, ${time})${session.completed ? '' : ' [INCOMPLETE — abandoned partway]'}:\n`;
+      const status = session.completed
+        ? ''
+        : session.date === today ? ' [IN PROGRESS — happening now]' : ' [INCOMPLETE — abandoned partway]';
+      summary += `  ${session.date} "${templateName(session.templateId)}" (${session.estimatedCalories} kcal, ${time})${status}:\n`;
+      const template = workoutTemplates.find((t) => t.id === session.templateId);
       for (const exSession of session.exercises) {
         const exercise = exercises.find((e) => e.id === exSession.exerciseId);
+        // A session note that just repeats the routine's standing cue is noise;
+        // one written or changed during the workout is a record of that day.
+        const standing = template?.exercises.find((e) => e.exerciseId === exSession.exerciseId)?.notes || '';
+        const note = exSession.note?.trim() && exSession.note.trim() !== standing.trim()
+          ? ` — note that day: "${exSession.note.trim()}"`
+          : '';
         if (exercise?.isCardio) {
-          summary += `    ${exerciseName(exSession.exerciseId)}: ${exSession.cardioMinutes || 0} min${exSession.estimatedCalories ? `, ${exSession.estimatedCalories} kcal` : ''}\n`;
+          summary += `    ${exerciseName(exSession.exerciseId)}: ${exSession.cardioMinutes || 0} min${exSession.estimatedCalories ? `, ${exSession.estimatedCalories} kcal` : ''}${note}\n`;
         } else {
           const done = exSession.sets.filter((s) => s.completed);
           const skipped = exSession.sets.length - done.length;
           const orm = getBestOneRepMax(exSession.sets);
           summary += `    ${exerciseName(exSession.exerciseId)}: ${done.map((s) => `${s.reps}x${s.loadKg}kg`).join(', ') || 'no sets completed'}`
             + `${skipped > 0 ? ` (${skipped} set${skipped === 1 ? '' : 's'} not completed)` : ''}`
-            + `${orm > 0 ? ` (est. 1RM: ${orm}kg)` : ''}\n`;
+            + `${orm > 0 ? ` (est. 1RM: ${orm}kg)` : ''}${note}\n`;
         }
       }
     }
@@ -360,13 +381,32 @@ date | wt | wt7d | bf% | ffmi | bic | in | tgt | out | bal | P | Ptgt | C | F | 
   }
 
   // ── Templates ──────────────────────────────────────────────────────────
-  if (workoutTemplates.length > 0) {
-    summary += `\nWORKOUT TEMPLATES (${workoutTemplates.length}) — the planned routines:\n`;
-    for (const t of workoutTemplates) {
+  const activeTemplates = workoutTemplates.filter((t) => !t.archived);
+  const archivedTemplates = workoutTemplates.filter((t) => t.archived);
+  if (activeTemplates.length > 0) {
+    summary += `\nWORKOUT TEMPLATES (${activeTemplates.length}) — the current routines, in the user's order:\n`;
+    for (const t of activeTemplates) {
       summary += `  "${t.name}":\n`;
       for (const e of t.exercises) {
         summary += `    ${exerciseName(e.exerciseId)}: ${e.sets}x${e.defaultReps}@${e.defaultLoadKg}kg${e.notes ? ` — note: ${e.notes}` : ''}\n`;
       }
+    }
+  }
+  // Names only: they still label past sessions, but are no longer followed.
+  if (archivedTemplates.length > 0) {
+    summary += `\nARCHIVED ROUTINES (retired — not part of the current plan; may appear in past sessions): ${archivedTemplates.map((t) => `"${t.name}"`).join(', ')}\n`;
+  }
+
+  // ── Saved meals ────────────────────────────────────────────────────────
+  if (savedMeals.length > 0) {
+    summary += `\nSAVED MEALS (${savedMeals.length}) — combinations the user logs regularly, with totals at the saved quantities:\n`;
+    for (const meal of savedMeals) {
+      const t = meal.items.reduce((acc, i) => {
+        const r = i.servingSize > 0 ? i.quantityG / i.servingSize : 0;
+        return { p: acc.p + i.proteinG * r, c: acc.c + i.carbsG * r, f: acc.f + i.fatG * r, fib: acc.fib + i.fiberG * r };
+      }, { p: 0, c: 0, f: 0, fib: 0 });
+      const kcal = Math.round(t.p * 4 + t.c * 4 + t.f * 9 + t.fib * 2);
+      summary += `  "${meal.name}": ${kcal} kcal, P${Math.round(t.p)}g C${Math.round(t.c)}g F${Math.round(t.f)}g — ${meal.items.map((i) => `${i.name} ${i.quantityG}g`).join(', ')}\n`;
     }
   }
 
@@ -399,7 +439,10 @@ HOW THE DATA IS ORGANISED:
 - MEAL DETAIL and WORKOUT DETAIL only cover the last 30 days. Older days are still fully represented in the DAILY SUMMARY table — if asked about an older day, use the table and do not say the data is missing.
 - STRENGTH PROGRESSION covers all history as estimated 1RM and total volume per exercise per session. Use it for progression questions rather than the 30-day detail.
 - 'rest' in the training column means the day was logged but no workout was done. Days in UNLOGGED DAYS have no entries at all — that is missing data, not a rest day. Keep the two distinct.
-- Sessions marked INCOMPLETE were started and abandoned; their calories are excluded from 'out'.
+- Sessions marked INCOMPLETE were started and abandoned; their calories are excluded from 'out'. A session marked IN PROGRESS is today's workout, still under way — do not treat it as abandoned.
+- Neck is optional and often left blank, in which case it is estimated from nearby entries. A bf% marked * was computed from an estimated neck: treat small day-to-day changes in those values as estimation noise, not real body-composition change.
+- WORKOUT TEMPLATES are the routines the user currently follows. ARCHIVED ROUTINES are retired: do not recommend them as the current plan.
+- A "note that day" on an exercise was written during that workout and records something about that session specifically.
 
 You can:
 - Analyze trends in weight, body composition, nutrition, and workouts
